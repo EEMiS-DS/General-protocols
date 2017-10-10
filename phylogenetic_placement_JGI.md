@@ -18,6 +18,9 @@ Files needed:
 #### Define environment variables
 
 ```bash
+# folder with shared tools, scripts etc.
+export PATH=/proj/b2016308/glob:$PATH
+
 # working directory
 export wd="/pica/v9/b2016308_nobackup/projects/JGI_CSP_analyses/phylogenetic_placement"
 export samples="11383.1.204469.GTGAAA 11383.1.204469.GTGGCC 11408.1.205223.GTTTCG 11341.6.202084.TAGCTT 11606.7.214304.GTCCGC 11287.7.199536.GGCTAC 11287.8.199539.CTTGTA 11287.8.199539.AGTCAA 11292.4.199689.AGTTCC 11292.4.199689.ATGTCA 11292.5.199692.CCGTCC 11292.5.199692.GTAGAG"
