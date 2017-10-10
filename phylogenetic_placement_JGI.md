@@ -23,8 +23,10 @@ export wd="/pica/v9/b2016308_nobackup/projects/JGI_CSP_analyses/phylogenetic_pla
 export samples="11383.1.204469.GTGAAA 11383.1.204469.GTGGCC 11408.1.205223.GTTTCG 11341.6.202084.TAGCTT 11606.7.214304.GTCCGC 11287.7.199536.GGCTAC 11287.8.199539.CTTGTA 11287.8.199539.AGTCAA 11292.4.199689.AGTTCC 11292.4.199689.ATGTCA 11292.5.199692.CCGTCC 11292.5.199692.GTAGAG"
 # reference alignment in phylip format
 export arcSSU_RA="/home/domeni/projects_b2016308/TOL/170921/TOS_all.l600.ark.clean.95Gaps.afa.reduced"
+export bacSSU_RA="/home/domeni/projects_b2016308/TOL/170921/TOS_all.l600.bac.clean.95Gaps.afa.reduced"
 # reference tree in newick format
 export arcSSU_RT="/home/domeni/projects_b2016308/TOL/170921/RAxML_bipartitionsBranchLabels.TOS_all.l600.ark.clean.95Gaps.reduced_n4"
+export bacSSU_RT="/home/domeni/projects_b2016308/TOL/170921/RAxML_bipartitionsBranchLabels.TOS_all.l600.bac.clean.95Gaps.reduced_n4"
 
 # output folders
 export sortmernaChunkFolder=${wd}/sortmerna_out_chunks
@@ -190,17 +192,18 @@ done
     - orphan read file
 
 ```bash
-mkdir sortmerna_out_chunks
+cd ${wd}
+mkdir -p ${sortmernaChunkFolder}
 for sample in ${samples}; do
     export sample=${sample}
     for domain in "arc bac"; do
         export domain=${domain}
-sbatch -p core -t 1:00:00 -A b2013127 -J sortProc.${sample}.chunks -o sortProc.${sample}.chunks.out -e sortProc.${sample}.chunks.err --mail-type=ALL --mail-user=domenico.simone@lnu.se<<'EOF'
+sbatch -p core -t 1:00:00 -A b2013127 -J sortProc.${sample}.${domain}.chunks -o sortProc.${sample}.${domain}.chunks.out -e sortProc.${sample}.${domain}.chunks.err --mail-type=ALL --mail-user=domenico.simone@lnu.se<<'EOF'
 #!/bin/bash
 
 processSortMeRNAsam.chunks.py \
 ${sample}_sortmerna_aligned_${domain}SSU.allreads.sam \
-sortmerna_out_chunks
+${sortmernaChunkFolder}
 EOF
 done
 ```
@@ -212,31 +215,43 @@ Needs a reference alignment in phylip format.
 
 ```bash
 cd ${wd}
-export sortmernaChunkFolder=${wd}/sortmerna_out_chunks
-export paparaOutFolder=${wd}/papara_out_chunks
-for infile in $(ls $sortmernaChunkFolder); do
-    export infile=$infile
-sbatch -t 60:00:00 -p node -A b2016308 \
--J papara_${infile} \
--o ${paparaOutFolder}/papara_${infile}.out \
--e ${paparaOutFolder}/papara_${infile}.err \
+mkdir -p ${paparaOutFolder}
+
+for domain in "arc bac"; do
+    export domain=${domain}
+    if [ "$domain" = "arc" ]
+    then
+        export RT=${arcSSU_RT}
+        export RA=${arcSSU_RA}
+        ls ${sortmernaChunkFolder}/*arcSSU*.fa | awk 'BEGIN{FS="/"}{print $NF}' > sortmerna_out_chunks.arc.list
+    else
+        export RT=${bacSSU_RT}
+        export RA=${bacSSU_RA}
+        ls ${sortmernaChunkFolder}/*bacSSU*.fa | awk 'BEGIN{FS="/"}{print $NF}' > sortmerna_out_chunks.bac.list
+sbatch -t 10:00:00 -p node -A b2016308 \
+--array=1-$(wc -l < sortmerna_out_chunks.${domain}.list) \
+-J papara_${domain}_%a \
+-o ${paparaOutFolder}/papara_${domain}_%a.out \
+-e ${paparaOutFolder}/papara_${domain}_%a.err \
 --mail-type=ALL --mail-user=domenico.simone@lnu.se<<'BWE'
 #!/bin/bash
+
+infile=$(sed -n "$SLURM_ARRAY_TASK_ID"p sortmerna_out_chunks.${domain}.list)
 
 # papara is in my glob directory
 ##for testing
 #export sample=P1607_145
 #export i=R1
 
-cp ${arcSSU_RT} ${SNIC_TMP}
-cp ${arcSSU_RA} ${SNIC_TMP}
+cp ${RT} ${SNIC_TMP}
+cp ${RA} ${SNIC_TMP}
 cd ${SNIC_TMP}
 
 papara \
 -j 16 \
--t ${arcSSU_RT} \
--s ${arcSSU_RA} \
--q ${sortmernaChunk}/${infile} \
+-t ${RT} \
+-s ${RA} \
+-q ${sortmernaChunkFolder}/${infile} \
 -n ${infile}
 
 tar -cvzf \
