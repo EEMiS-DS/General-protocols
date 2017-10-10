@@ -2,13 +2,13 @@
 
 ### PaPaRa
 
-#### Test workflow from SSU read sorting to phylogenetic placement
+#### Workflow from SSU read sorting to phylogenetic placement
 
-**Dataset**: Archaea reads from acidophilic MFC metatranscriptome datasets (Gaofeng). Two replicates: P1607_145 and P1607_153.
+**Dataset**: JGI CSP metagenome data.
 
 Tools needed:
 - SortMeRNA (available on cluster)
-- PaPaRa (in my `glob` directory: the precompiled executable has problems, so had to re-compile it)
+- PaPaRa (in `/proj/b2016308/glob/` directory: the precompiled executable has problems, so had to re-compile it)
 - RAxML (available on cluster)
 
 Files needed:
@@ -238,7 +238,7 @@ sbatch -t 10:00:00 -p node -A b2016308 \
 
 infile=$(sed -n "$SLURM_ARRAY_TASK_ID"p sortmerna_out_chunks.${domain}.list)
 
-# papara is in my glob directory
+export PATH=/proj/b2016308/glob/:$PATH
 ##for testing
 #export sample=P1607_145
 #export i=R1
