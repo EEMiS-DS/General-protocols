@@ -72,13 +72,13 @@ cd ${SNIC_TMP}
 # to
 # @HISEQ09:341:CA3UPANXX:7:1213:10106:44664/1
 python -c """
-import sys
+import sys, gzip
 
 infile = sys.argv[1]
 outfile = sys.argv[2]
 outhandle = open(outfile, 'w')
 
-for i in open(infile, 'r'):
+for i in gzip.open(infile, 'r'):
     if i.startswith('@HISEQ'):
         header = i.split()[0] + '/' + i.split()[1][0]
         outhandle.write(header + '\n')
@@ -132,13 +132,13 @@ cd ${SNIC_TMP}
 # to
 # @HISEQ09:341:CA3UPANXX:7:1213:10106:44664/1
 python -c """
-import sys
+import sys, gzip
 
 infile = sys.argv[1]
 outfile = sys.argv[2]
 outhandle = open(outfile, 'w')
 
-for i in open(infile, 'r'):
+for i in gzip.open(infile, 'r'):
     if i.startswith('@HISEQ'):
         header = i.split()[0] + '/' + i.split()[1][0]
         outhandle.write(header + '\n')
