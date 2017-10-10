@@ -79,11 +79,11 @@ outfile = sys.argv[2]
 outhandle = open(outfile, 'w')
 
 for i in open(infile, 'r'):
-	if i.startswith('@HISEQ'):
-		header = i.split()[0] + '/' + i.split()[1][0]
-		outhandle.write(header + '\n')
-	else:
-		outhandle.write(i)
+    if i.startswith('@HISEQ'):
+        header = i.split()[0] + '/' + i.split()[1][0]
+        outhandle.write(header + '\n')
+    else:
+        outhandle.write(i)
 
 outhandle.close()
 """ ${wd}/${sample}.filter-METAGENOME.fastq.gz ${sample}.interleaved.fastq
@@ -139,11 +139,11 @@ outfile = sys.argv[2]
 outhandle = open(outfile, 'w')
 
 for i in open(infile, 'r'):
-	if i.startswith('@HISEQ'):
-		header = i.split()[0] + '/' + i.split()[1][0]
-		outhandle.write(header + '\n')
-	else:
-		outhandle.write(i)
+    if i.startswith('@HISEQ'):
+        header = i.split()[0] + '/' + i.split()[1][0]
+        outhandle.write(header + '\n')
+    else:
+        outhandle.write(i)
 
 outhandle.close()
 """ ${wd}/${sample}.filter-METAGENOME.fastq.gz ${sample}.interleaved.fastq
