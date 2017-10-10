@@ -20,7 +20,7 @@ Files needed:
 ```bash
 # working directory
 export wd="/pica/v9/b2016308_nobackup/projects/JGI_CSP_analyses/phylogenetic_placement"
-export samples="11383.1.204469.GTGAAA 1383.1.204469.GTGGCC 11408.1.205223.GTTTCG 11341.6.202084.TAGCTT 11606.7.214304.GTCCGC 11287.7.199536.GGCTAC 11287.8.199539.CTTGTA 11287.8.199539.AGTCAA 11292.4.199689.AGTTCC 11292.4.199689.ATGTCA 11292.5.199692.CCGTCC 11292.5.199692.GTAGAG"
+export samples="11383.1.204469.GTGAAA 11383.1.204469.GTGGCC 11408.1.205223.GTTTCG 11341.6.202084.TAGCTT 11606.7.214304.GTCCGC 11287.7.199536.GGCTAC 11287.8.199539.CTTGTA 11287.8.199539.AGTCAA 11292.4.199689.AGTTCC 11292.4.199689.ATGTCA 11292.5.199692.CCGTCC 11292.5.199692.GTAGAG"
 # reference alignment in phylip format
 export arcSSU_RA="/home/domeni/projects_b2016308/TOL/170921/TOS_all.l600.ark.clean.95Gaps.afa.reduced"
 # reference tree in newick format
@@ -173,12 +173,14 @@ done
 ```bash
 cd $wd
 for sample in ${samples}; do
-    totalAligned=$(grep -vc "^@" ${sample}_sortmerna_aligned_arcSSU.allreads.sam)
-    orphanAl=$(cat ${sample}_sortmerna_aligned_arcSSU.allreads.sam | awk '{count[$1]++}END{ for (j in count) print j, count[j] }' | awk '$2!=2{print $0}')
-    let "PE=($totalAligned-$orphanAl)/2"
-    echo ${sample}
-    echo "Fragments with both reads aligned: $PE"
-    echo "Fragments with one read aligned: $orphanAl"
+    for domain in "arc bac"; do
+        totalAligned=$(grep -vc "^@" ${sample}_sortmerna_aligned_${domain}SSU.allreads.sam)
+        orphanAl=$(cat ${sample}_sortmerna_aligned_${domain}SSU.allreads.sam | awk '{count[$1]++}END{ for (j in count) print j, count[j] }' | awk '$2!=2{print $0}')
+        let "PE=($totalAligned-$orphanAl)/2"
+        echo ${sample} ${domain}
+        echo "Fragments with both reads aligned: $PE"
+        echo "Fragments with one read aligned: $orphanAl"
+done
 done
 ```
 
@@ -191,11 +193,13 @@ done
 mkdir sortmerna_out_chunks
 for sample in ${samples}; do
     export sample=${sample}
+    for domain in "arc bac"; do
+        export domain=${domain}
 sbatch -p core -t 1:00:00 -A b2013127 -J sortProc.${sample}.chunks -o sortProc.${sample}.chunks.out -e sortProc.${sample}.chunks.err --mail-type=ALL --mail-user=domenico.simone@lnu.se<<'EOF'
 #!/bin/bash
 
 processSortMeRNAsam.chunks.py \
-${sample}_sortmerna_aligned_arcSSU.allreads.sam \
+${sample}_sortmerna_aligned_${domain}SSU.allreads.sam \
 sortmerna_out_chunks
 EOF
 done
