@@ -173,7 +173,7 @@ Needs a reference alignment in phylip format.
 cd ${wd}
 mkdir -p ${paparaOutFolder}
 
-for domain in "arc bac"; do
+for domain in arc bac; do
     export domain=${domain}
     if [ "$domain" = "arc" ]
     then
