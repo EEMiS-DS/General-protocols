@@ -199,7 +199,7 @@ cd ${wd}
 mkdir -p ${sortmernaChunkFolder}
 for sample in ${samples}; do
     export sample=${sample}
-    for domain in "arc bac"; do
+    for domain in arc bac; do
         export domain=${domain}
 sbatch -p core -t 1:00:00 -A b2013127 -J sortProc.${sample}.${domain}.chunks -o sortProc.${sample}.${domain}.chunks.out -e sortProc.${sample}.${domain}.chunks.err --mail-type=ALL --mail-user=domenico.simone@lnu.se<<'EOF'
 #!/bin/bash
@@ -208,6 +208,7 @@ processSortMeRNAsam.chunks.py \
 ${sample}_sortmerna_aligned_${domain}SSU.allreads.sam \
 ${sortmernaChunkFolder}
 EOF
+done
 done
 ```
 
