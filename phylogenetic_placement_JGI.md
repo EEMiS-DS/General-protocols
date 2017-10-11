@@ -72,32 +72,7 @@ module load SortMeRNA/2.1b
 # move to temporary directory
 cd ${SNIC_TMP}
 
-# JGI datasets come already interleaved, but we need to reformat headers from
-# @HISEQ09:341:CA3UPANXX:7:1213:10106:44664 1:N:0:GGCTAC
-# to
-# @HISEQ09:341:CA3UPANXX:7:1213:10106:44664/1
-python -c """
-import sys, gzip
-
-infile = sys.argv[1]
-outfile = sys.argv[2]
-outhandle = open(outfile, 'w')
-
-for i in gzip.open(infile, 'r'):
-    if i.startswith('@HISEQ'):
-        header = i.split()[0] + '/' + i.split()[1][0]
-        outhandle.write(header + '\n')
-    else:
-        outhandle.write(i)
-
-outhandle.close()
-""" ${wd}/${sample}.filter-METAGENOME.fastq.gz ${sample}.interleaved.fastq
-
-# # interleave fastq as required by SortMeRNA
-# merge-paired-reads.sh \
-# ${wd}/${sample}.filtered.adapterTrimmed_1P.fastq \
-# ${wd}/${sample}.filtered.adapterTrimmed_2P.fastq \
-# ${sample}.interleaved.fastq
+zcat ${wd}/${sample}.filter-METAGENOME.fastq.gz > ${sample}.interleaved.fastq
 
 sortmerna --ref $SORTMERNA_DBS/rRNA_databases/silva-bac-16s-id90.fasta,$SORTMERNA_DBS/index/silva-bac-16s-id90 \
 --reads ${sample}.interleaved.fastq \
@@ -132,32 +107,7 @@ module load SortMeRNA/2.1b
 # move to temporary directory
 cd ${SNIC_TMP}
 
-# JGI datasets come already interleaved, but we need to reformat headers from
-# @HISEQ09:341:CA3UPANXX:7:1213:10106:44664 1:N:0:GGCTAC
-# to
-# @HISEQ09:341:CA3UPANXX:7:1213:10106:44664/1
-python -c """
-import sys, gzip
-
-infile = sys.argv[1]
-outfile = sys.argv[2]
-outhandle = open(outfile, 'w')
-
-for i in gzip.open(infile, 'r'):
-    if i.startswith('@HISEQ'):
-        header = i.split()[0] + '/' + i.split()[1][0]
-        outhandle.write(header + '\n')
-    else:
-        outhandle.write(i)
-
-outhandle.close()
-""" ${wd}/${sample}.filter-METAGENOME.fastq.gz ${sample}.interleaved.fastq
-
-# # interleave fastq as required by SortMeRNA
-# merge-paired-reads.sh \
-# ${wd}/${sample}.filtered.adapterTrimmed_1P.fastq \
-# ${wd}/${sample}.filtered.adapterTrimmed_2P.fastq \
-# ${sample}.interleaved.fastq
+zcat ${wd}/${sample}.filter-METAGENOME.fastq.gz > ${sample}.interleaved.fastq
 
 sortmerna --ref /sw/apps/bioinfo/SortMeRNA/2.1b/milou/sortmerna/rRNA_databases/silva-arc-16s-id95.fasta,/sw/apps/bioinfo/SortMeRNA/2.1b/milou/sortmerna/index/silva-arc-16s-id95 \
 --reads ${sample}.interleaved.fastq \
@@ -178,11 +128,13 @@ done
 ```bash
 cd $wd
 for sample in ${samples}; do
-    for domain in "arc bac"; do
+    for domain in arc bac; do
         totalAligned=$(grep -vc "^@" ${sample}_sortmerna_aligned_${domain}SSU.allreads.sam)
-        orphanAl=$(cat ${sample}_sortmerna_aligned_${domain}SSU.allreads.sam | awk '{count[$1]++}END{ for (j in count) print j, count[j] }' | awk '$2!=2{print $0}')
+        orphanAl=$(cat ${sample}_sortmerna_aligned_${domain}SSU.allreads.sam | awk '{count[$1]++}END{ for (j in count) print j, count[j] }' | awk '$2!=2{print $0}' | wc -l)
         let "PE=($totalAligned-$orphanAl)/2"
         echo ${sample} ${domain}
+        echo "Total reads aligned: $totalAligned"
+        echo "Orphan reads: $orphanAl"
         echo "Fragments with both reads aligned: $PE"
         echo "Fragments with one read aligned: $orphanAl"
 done
