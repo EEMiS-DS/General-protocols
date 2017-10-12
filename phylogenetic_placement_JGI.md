@@ -174,16 +174,18 @@ cd ${wd}
 mkdir -p ${paparaOutFolder}
 
 for domain in arc bac; do
+#for domain in bac; do
     export domain=${domain}
-    if [ "$domain" = "arc" ]
+    if [[ ${domain} == "arc" ]]
     then
         export RT=${arcSSU_RT}
         export RA=${arcSSU_RA}
-        ls ${sortmernaChunkFolder}/*arcSSU*.fa | awk 'BEGIN{FS="/"}{print $NF}' > sortmerna_out_chunks.arc.list
+        ls ${sortmernaChunkFolder}/*${domain}SSU*.fa | awk 'BEGIN{FS="/"}{print $NF}' > sortmerna_out_chunks.${domain}.list
     else
         export RT=${bacSSU_RT}
         export RA=${bacSSU_RA}
-        ls ${sortmernaChunkFolder}/*bacSSU*.fa | awk 'BEGIN{FS="/"}{print $NF}' > sortmerna_out_chunks.bac.list
+        ls ${sortmernaChunkFolder}/*${domain}SSU*.fa | awk 'BEGIN{FS="/"}{print $NF}' > sortmerna_out_chunks.${domain}.list
+    fi
 sbatch -t 10:00:00 -p node -A b2016308 \
 --array=1-$(wc -l < sortmerna_out_chunks.${domain}.list) \
 -J papara_${domain}_%a \
@@ -192,6 +194,8 @@ sbatch -t 10:00:00 -p node -A b2016308 \
 --mail-type=ALL --mail-user=domenico.simone@lnu.se<<'BWE'
 #!/bin/bash
 
+# test
+# infile="P1607_145_sortmerna_aligned_bacSSU.allreads.orphans.1.fa"
 infile=$(sed -n "$SLURM_ARRAY_TASK_ID"p sortmerna_out_chunks.${domain}.list)
 
 export PATH=/proj/b2016308/glob/:$PATH
@@ -201,13 +205,17 @@ export PATH=/proj/b2016308/glob/:$PATH
 
 cp ${RT} ${SNIC_TMP}
 cp ${RA} ${SNIC_TMP}
+cp ${sortmernaChunkFolder}/${infile} ${SNIC_TMP}
 cd ${SNIC_TMP}
 
-papara \
+echo "temp folder:"
+ls *
+
+time papara \
 -j 16 \
--t ${RT} \
--s ${RA} \
--q ${sortmernaChunkFolder}/${infile} \
+-t $(basename ${RT}) \
+-s $(basename ${RA}) \
+-q ${infile} \
 -n ${infile}
 
 tar -cvzf \
