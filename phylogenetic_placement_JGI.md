@@ -240,28 +240,10 @@ for domain in arc bac; do
     if [[ ${domain} == "arc" ]]
     then
         export RT=${arcSSU_RT}
-        export depjid="11289611"
     else
         export RT=${bacSSU_RT}
-        export depjid="11289612"
     fi
-# use variables:
-#   arcSSU_RT
-#   sortmernaChunkFolder
-#   paparaOutFolder which contains:
-#       - archive ${infile}.papara.tar.gz with alignment file
-#           - papara_alignment.${infile}
-# for infile in $(ls $sortmernaChunkFolder | grep -v P1607_145_sortmerna_aligned_arcSSU.allreads.R1.0.fa); do
-#     export infile=$infile
-# if [[ ${infile} == *"bacSSU"* ]]; then
-#     export depjid="11289612"
-# elif [[ ${infile} == *"arcSSU"* ]]; then
-#     export depjid="11289612"
-# fi
-#export infile="P1607_145_sortmerna_aligned_arcSSU.allreads.R1.0.fa"
-
 #salloc -p devcore -n 8 -t 1:00:00 -A b2013127
-
 sbatch -p core -n 8 -t 20:00:00 -A b2016308 \
 --array=1-$(wc -l < sortmerna_out_chunks.${domain}.list) \
 --dependency=afterany:${depjid} \
