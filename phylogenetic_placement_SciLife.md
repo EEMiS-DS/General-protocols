@@ -1,10 +1,8 @@
 # Phylogenetic placement of NGS reads
 
-### PaPaRa
-
 #### Workflow from SSU read sorting to phylogenetic placement
 
-**Dataset**: JGI CSP metagenome data.
+**Dataset**: Aspo SciLife metagenome data.
 
 Tools needed:
 - SortMeRNA (available on cluster)
@@ -22,8 +20,8 @@ Files needed:
 export PATH=/proj/b2016308/glob:$PATH
 
 # working directory
-export wd="/pica/v9/b2016308_nobackup/projects/JGI_CSP_analyses/phylogenetic_placement"
-export samples="11383.1.204469.GTGAAA 11383.1.204469.GTGGCC 11408.1.205223.GTTTCG 11341.6.202084.TAGCTT 11606.7.214304.GTCCGC 11287.7.199536.GGCTAC 11287.8.199539.CTTGTA 11287.8.199539.AGTCAA 11292.4.199689.AGTTCC 11292.4.199689.ATGTCA 11292.5.199692.CCGTCC 11292.5.199692.GTAGAG"
+export wd="/pica/v9/b2016308_nobackup/projects/JGI_CSP_analyses/phylogenetic_placement_SciLife"
+export samples="MMBG-A MMBG-B MMBR-A MMBR-B MMPL-A MMPL-B MMPS-A MMPS-B1 MMPS-B2 OSBG-A OSBG-B OSBR-A OSBR-B OSPL-A OSPL-B OSPS-A1 OSPS-A2 OSPS-B UMPL-A UMPL-B UMPS-A1 UMPS-A2 UMPS-B"
 # reference alignment in phylip format
 export arcSSU_RA="/home/domeni/projects_b2016308/TOL/170921/TOS_all.l600.ark.clean.95Gaps.afa.reduced"
 export bacSSU_RA="/home/domeni/projects_b2016308/TOL/170921/TOS_all.l600.bac.clean.95Gaps.afa.reduced"
@@ -45,13 +43,13 @@ export raxmlEPAChunkFolder=${wd}/raxmlEPA_out_chunks
 # create folder
 mkdir -p ${wd}
 cd ${wd}
-ln -s /proj/b2016308/nobackup/projects/JGI_CSP_data/*METAGENOME* .
+ln -s /proj/b2013127/nobackup/projects/xiaofen/biofilm/no_cut_contigs/reads/*fastq.gz .
 ```
 
 PaPaRa needs the reads to be already oriented in the same strand they're going to be aligned. Reads are already reversed and complemented (if needed) in the sam output of SortMeRNA.
 
 #### SortMeRNA
-Don't need to interleave fastq files first!
+Need to interleave fastq files first!
 
 - Bacteria
 
@@ -62,8 +60,7 @@ for sample in ${samples}; do
 sbatch -t 10:00:00 -p node -A b2016308 \
 -J sortmerna_${sample}_bac.allreads \
 -o sortmerna_${sample}_bac.allreads.out \
--e sortmerna_${sample}_bac.allreads.err \
---mail-type=ALL --mail-user=tyuamail@mail.com,domenico.simone@lnu.se<<'BWE'
+-e sortmerna_${sample}_bac.allreads.err<<'BWE'
 #!/bin/bash
 
 module load bioinfo-tools
@@ -72,7 +69,14 @@ module load SortMeRNA/2.1b
 # move to temporary directory
 cd ${SNIC_TMP}
 
-zcat ${wd}/${sample}.filter-METAGENOME.fastq.gz > ${sample}.interleaved.fastq
+# interleave fastq as required by SortMeRNA
+zcat ${wd}/${sample}.qtrim1.fastq.gz > ${sample}.R1.fastq
+zcat ${wd}/${sample}.qtrim2.fastq.gz > ${sample}.R2.fastq
+
+merge-paired-reads.sh \
+${sample}.R1.fastq \
+${sample}.R2.fastq \
+${sample}.interleaved.fastq
 
 sortmerna --ref $SORTMERNA_DBS/rRNA_databases/silva-bac-16s-id90.fasta,$SORTMERNA_DBS/index/silva-bac-16s-id90 \
 --reads ${sample}.interleaved.fastq \
@@ -97,8 +101,7 @@ for sample in ${samples}; do
 sbatch -t 10:00:00 -p node -A b2016308 \
 -J sortmerna_${sample}_arc.allreads \
 -o sortmerna_${sample}_arc.allreads.out \
--e sortmerna_${sample}_arc.allreads.err \
---mail-type=ALL --mail-user=domenico.simone@lnu.se<<'BWE'
+-e sortmerna_${sample}_arc.allreads.err<<'BWE'
 #!/bin/bash
 
 module load bioinfo-tools
