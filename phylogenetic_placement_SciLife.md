@@ -23,11 +23,11 @@ export PATH=/proj/b2016308/glob:$PATH
 export wd="/pica/v9/b2016308_nobackup/projects/JGI_CSP_analyses/phylogenetic_placement_SciLife"
 export samples="MMBG-A MMBG-B MMBR-A MMBR-B MMPL-A MMPL-B MMPS-A MMPS-B1 MMPS-B2 OSBG-A OSBG-B OSBR-A OSBR-B OSPL-A OSPL-B OSPS-A1 OSPS-A2 OSPS-B UMPL-A UMPL-B UMPS-A1 UMPS-A2 UMPS-B"
 # reference alignment in phylip format
-export arcSSU_RA="/home/domeni/projects_b2016308/TOL/170921/TOS_all.l600.ark.clean.95Gaps.afa.reduced"
-export bacSSU_RA="/home/domeni/projects_b2016308/TOL/170921/TOS_all.l600.bac.clean.95Gaps.afa.reduced"
+export arcSSU_RA="/proj/b2016308/glob/TOS_all.l600.ark.clean.95Gaps.afa.reduced"
+export bacSSU_RA="/proj/b2016308/glob/TOS_all.l600.bac.clean.95Gaps.afa.reduced"
 # reference tree in newick format
-export arcSSU_RT="/home/domeni/projects_b2016308/TOL/170921/RAxML_bipartitionsBranchLabels.TOS_all.l600.ark.clean.95Gaps.reduced_n4"
-export bacSSU_RT="/home/domeni/projects_b2016308/TOL/170921/RAxML_bipartitionsBranchLabels.TOS_all.l600.bac.clean.95Gaps.reduced_n4"
+export arcSSU_RT="/proj/b2016308/glob/RAxML_bipartitionsBranchLabels.TOS_all.l600.ark.clean.95Gaps.reduced_n4"
+export bacSSU_RT="/proj/b2016308/glob/RAxML_bipartitionsBranchLabels.TOS_all.l600.bac.clean.95Gaps.reduced_n4"
 
 # output folders
 export sortmernaChunkFolder=${wd}/sortmerna_out_chunks
