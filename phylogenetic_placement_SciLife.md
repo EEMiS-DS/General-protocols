@@ -110,7 +110,14 @@ module load SortMeRNA/2.1b
 # move to temporary directory
 cd ${SNIC_TMP}
 
-zcat ${wd}/${sample}.filter-METAGENOME.fastq.gz > ${sample}.interleaved.fastq
+# interleave fastq as required by SortMeRNA
+zcat ${wd}/${sample}.qtrim1.fastq.gz > ${sample}.R1.fastq
+zcat ${wd}/${sample}.qtrim2.fastq.gz > ${sample}.R2.fastq
+
+merge-paired-reads.sh \
+${sample}.R1.fastq \
+${sample}.R2.fastq \
+${sample}.interleaved.fastq
 
 sortmerna --ref /sw/apps/bioinfo/SortMeRNA/2.1b/milou/sortmerna/rRNA_databases/silva-arc-16s-id95.fasta,/sw/apps/bioinfo/SortMeRNA/2.1b/milou/sortmerna/index/silva-arc-16s-id95 \
 --reads ${sample}.interleaved.fastq \
