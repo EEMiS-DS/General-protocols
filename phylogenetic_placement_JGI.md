@@ -228,7 +228,8 @@ BWE
 done
 ```
 
-Runtime for 100K seqs: ~ 6'30".
+Runtime for 100K seqs (archaea, 172 seqs in the tree): ~ 6'30".
+Runtime for 80K seqs (archaea, 1639 seqs in the tree): ~ 30'.
 
 #### RAxML-EPA
 
