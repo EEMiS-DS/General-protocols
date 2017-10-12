@@ -280,9 +280,3 @@ cp ${infile}.raxmlEPA.tar.gz ${raxmlEPAChunkFolder}
 EOF
 done
 ```
-
-#### Run all on total datasets
-
-
-
-Archaea from
