@@ -225,42 +225,61 @@ Runtime for 100K seqs: ~ 6'30".
 #### RAxML-EPA
 
 ```bash
-export raxmlEPAChunkFolder=${wd}/raxmlEPA_out_chunks
 mkdir -p ${raxmlEPAChunkFolder}
+
+for domain in arc bac; do
+    export domain=${domain}
+    if [[ ${domain} == "arc" ]]
+    then
+        export RT=${arcSSU_RT}
+        export depjid="11289611"
+    else
+        export RT=${bacSSU_RT}
+        export depjid="11289612"
+    fi
 # use variables:
 #   arcSSU_RT
 #   sortmernaChunkFolder
 #   paparaOutFolder which contains:
 #       - archive ${infile}.papara.tar.gz with alignment file
 #           - papara_alignment.${infile}
-for infile in $(ls $sortmernaChunkFolder | grep -v P1607_145_sortmerna_aligned_arcSSU.allreads.R1.0.fa); do
-    export infile=$infile
+# for infile in $(ls $sortmernaChunkFolder | grep -v P1607_145_sortmerna_aligned_arcSSU.allreads.R1.0.fa); do
+#     export infile=$infile
+# if [[ ${infile} == *"bacSSU"* ]]; then
+#     export depjid="11289612"
+# elif [[ ${infile} == *"arcSSU"* ]]; then
+#     export depjid="11289612"
+# fi
 #export infile="P1607_145_sortmerna_aligned_arcSSU.allreads.R1.0.fa"
-export paparaOutfile="${paparaOutFolder}/${infile}.papara.tar.gz"
-export alignFile="papara_alignment.${infile}"
+
 #salloc -p devcore -n 8 -t 1:00:00 -A b2013127
 
 sbatch -p core -n 8 -t 20:00:00 -A b2016308 \
--J raxmlEPA_${infile} \
--o ${raxmlEPAChunkFolder}/raxmlEPA_${infile}.out \
--e ${raxmlEPAChunkFolder}/raxmlEPA_${infile}.err \
---mail-type=ALL --mail-user=domenico.simone@lnu.se<<'EOF'
+--array=1-$(wc -l < sortmerna_out_chunks.${domain}.list) \
+--dependency=afterany:${depjid} \
+-J psy_raxmlEPA_${domain}_%a \
+-o ${raxmlEPAChunkFolder}/raxmlEPA_${domain}_%a.out \
+-e ${raxmlEPAChunkFolder}/raxmlEPA_${domain}_%a.err \
+--mail-type=ALL --mail-user=dome.simone@gmail.com<<'EOF'
 #!/bin/bash
 
 module load bioinfo-tools
 module load raxml
 
+infile=$(sed -n "$SLURM_ARRAY_TASK_ID"p sortmerna_out_chunks.${domain}.list)
+
+export paparaOutfile="${paparaOutFolder}/${infile}.papara.tar.gz"
+export alignFile="papara_alignment.${infile}"
+
 # extract papara output to SNIC_TMP
 tar -xvzf ${paparaOutfile} -C ${SNIC_TMP} ${alignFile}
-cp ${arcSSU_RT} ${SNIC_TMP}
-#algFile="papara_alignment.papara_test_revcomp_edited"
-#treeFile="RAxML_bipartitionsBranchLabels.TOS_all.l600.ark.clean.95Gaps.reduced_n4"
+cp ${RT} ${SNIC_TMP}
 
 cd ${SNIC_TMP}
 raxmlHPC-PTHREADS-AVX -f v \
 -s ${alignFile} \
 -G 0.1 \
--t ${arcSSU_RT} \
+-t ${RT} \
 -m GTRCAT \
 -n ${alignFile} \
 -T 8
@@ -269,6 +288,7 @@ tar -cvzf ${infile}.raxmlEPA.tar.gz RAxML_*
 
 cp ${infile}.raxmlEPA.tar.gz ${raxmlEPAChunkFolder}
 EOF
+done
 ```
 
 #### Run all on total datasets
