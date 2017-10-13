@@ -259,8 +259,7 @@ sbatch -p core -n 8 -t 20:00:00 -A b2016308 \
 --array=1-$(wc -l < sortmerna_out_chunks.${domain}.list) \
 -J SciLife_raxmlEPA_${domain}_%a \
 -o ${raxmlEPAChunkFolder}/raxmlEPA_${domain}_%a.out \
--e ${raxmlEPAChunkFolder}/raxmlEPA_${domain}_%a.err \
---mail-type=ALL --mail-user=dome.simone@gmail.com<<'EOF'
+-e ${raxmlEPAChunkFolder}/raxmlEPA_${domain}_%a.err<<'EOF'
 #!/bin/bash
 
 module load bioinfo-tools
