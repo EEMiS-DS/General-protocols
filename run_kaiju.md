@@ -3,6 +3,7 @@
 ```bash
 #salloc -p devel -t 1:00:00 -A b2016308
 
+# list samples so you can read them in array jobs
 cd /home/domeni/projects_b2016308/aspo
 ls *.fa > samples
 
