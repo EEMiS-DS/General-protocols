@@ -30,6 +30,13 @@ We'll pull PE and SE aligned / non-aligned reads.
 
 #### Get unaligned reads to assemble mRNA
 
+For each technical replicate, the following files will be output in the folder `${wd}/sortmerna`:
+
+- `${sample}_sortmerna_aligned_mRNA.allreads.PE.fastq`. Indeed these files are interleaved so maybe they need to be processed (de-interleaved) before running Trinity. If this is the case, you can load SortMeRNA and use the script `unmerge-paired-reads.sh`.
+- `${sample}_sortmerna_aligned_mRNA.allreads.SE.fastq`.
+
+**Run SortMeRNA**
+
 - PE reads
 
 ```bash
