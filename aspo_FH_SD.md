@@ -200,6 +200,49 @@ cp ${sample}_sortmerna_aligned_arcSSU.allreads.PE* ${wd}/sortmerna
 BWE
 ```
 
+- Eukaryotic SSU (PE reads)
+
+```bash
+cd ${wd}
+mkdir -p sortmerna
+
+sbatch -t 10:00:00 -p node -A b2016308 \
+--array=1-$(wc -l < TechReplicates) \
+-J sortmerna_${sample}_euk.allreads.PE.%a \
+-o sortmerna_${sample}_euk.allreads.PE.%a.out \
+-e sortmerna_${sample}_euk.allreads.PE.%a.err<<'BWE'
+#!/bin/bash
+
+module load bioinfo-tools
+module load SortMeRNA/2.1b
+
+sample=$(sed -n "$SLURM_ARRAY_TASK_ID"p TechReplicates)
+
+# move to temporary directory
+cd ${SNIC_TMP}
+
+# interleave fastq as required by SortMeRNA
+zcat ${wd}/${sample}_f.aT.notCombined_1.fastq.gz > ${sample}.R1.fastq
+zcat ${wd}/${sample}_f.aT.notCombined_1.fastq.gz > ${sample}.R2.fastq
+
+merge-paired-reads.sh \
+${sample}.R1.fastq \
+${sample}.R2.fastq \
+${sample}.interleaved.fastq
+
+sortmerna --ref $SORTMERNA_DBS/rRNA_databases/silva-euk-18s-id95.fasta,$SORTMERNA_DBS/index/silva-euk-18s-id95 \
+--reads ${sample}.interleaved.fastq \
+--aligned ${sample}_sortmerna_aligned_eukSSU.allreads.PE \
+--paired_in --fastx --log \
+--num_alignments 1 \
+--sam \
+-a 16 -e 1e-20
+
+ls ${sample}_sortmerna_aligned_eukSSU.allreads.PE*
+cp ${sample}_sortmerna_aligned_eukSSU.allreads.PE* ${wd}/sortmerna
+BWE
+```
+
 - Bacterial SSU (SE reads)
 
 ```bash
@@ -227,7 +270,7 @@ zcat ${wd}/${sample}_f.aT.extendedFrags.fastq.gz > ${sample}.fastq
 sortmerna --ref $SORTMERNA_DBS/rRNA_databases/silva-bac-16s-id90.fasta,$SORTMERNA_DBS/index/silva-bac-16s-id90 \
 --reads ${sample}.fastq \
 --aligned ${sample}_sortmerna_aligned_bacSSU.allreads.SE \
---paired_in --fastx --log \
+--fastx --log \
 --num_alignments 1 \
 --sam \
 -a 16 -e 1e-20
@@ -264,7 +307,7 @@ zcat ${wd}/${sample}_f.aT.extendedFrags.fastq.gz > ${sample}.fastq
 sortmerna --ref $SORTMERNA_DBS/rRNA_databases/silva-arc-16s-id95.fasta,$SORTMERNA_DBS/index/silva-arc-16s-id95 \
 --reads ${sample}.fastq \
 --aligned ${sample}_sortmerna_aligned_arcSSU.allreads.SE \
---paired_in --fastx --log \
+--fastx --log \
 --num_alignments 1 \
 --sam \
 -a 16 -e 1e-20
@@ -273,3 +316,41 @@ ls ${sample}_sortmerna_aligned_arcSSU.allreads.SE*
 cp ${sample}_sortmerna_aligned_arcSSU.allreads.SE* ${wd}/sortmerna
 BWE
 ```
+
+- Eukaryotic SSU (SE reads)
+
+```bash
+cd ${wd}
+mkdir -p sortmerna
+
+sbatch -t 10:00:00 -p node -A b2016308 \
+--array=1-$(wc -l < TechReplicates) \
+-J sortmerna_${sample}_euk.allreads.SE \
+-o sortmerna_${sample}_euk.allreads.SE.%a.out \
+-e sortmerna_${sample}_euk.allreads.SE.%a.err<<'BWE'
+#!/bin/bash
+
+module load bioinfo-tools
+module load SortMeRNA/2.1b
+
+sample=$(sed -n "$SLURM_ARRAY_TASK_ID"p TechReplicates)
+
+# move to temporary directory
+cd ${SNIC_TMP}
+
+# copy files on tmp directory
+zcat ${wd}/${sample}_f.aT.extendedFrags.fastq.gz > ${sample}.fastq
+
+sortmerna --ref $SORTMERNA_DBS/rRNA_databases/silva-euk-18s-id95.fasta,$SORTMERNA_DBS/index/silva-euk-18s-id95 \
+--reads ${sample}.fastq \
+--aligned ${sample}_sortmerna_aligned_eukSSU.allreads.SE \
+--fastx --log \
+--num_alignments 1 \
+--sam \
+-a 16 -e 1e-20
+
+ls ${sample}_sortmerna_aligned_eukSSU.allreads.SE*
+cp ${sample}_sortmerna_aligned_eukSSU.allreads.SE* ${wd}/sortmerna
+BWE
+```
+
