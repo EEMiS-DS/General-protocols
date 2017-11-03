@@ -60,7 +60,7 @@ cd ${SNIC_TMP}
 
 # interleave fastq as required by SortMeRNA
 zcat ${wd}/${sample}_f.aT.notCombined_1.fastq.gz > ${sample}.R1.fastq
-zcat ${wd}/${sample}_f.aT.notCombined_1.fastq.gz > ${sample}.R2.fastq
+zcat ${wd}/${sample}_f.aT.notCombined_2.fastq.gz > ${sample}.R2.fastq
 
 merge-paired-reads.sh \
 ${sample}.R1.fastq \
@@ -144,7 +144,7 @@ cd ${SNIC_TMP}
 
 # interleave fastq as required by SortMeRNA
 zcat ${wd}/${sample}_f.aT.notCombined_1.fastq.gz > ${sample}.R1.fastq
-zcat ${wd}/${sample}_f.aT.notCombined_1.fastq.gz > ${sample}.R2.fastq
+zcat ${wd}/${sample}_f.aT.notCombined_2.fastq.gz > ${sample}.R2.fastq
 
 merge-paired-reads.sh \
 ${sample}.R1.fastq \
@@ -187,7 +187,7 @@ cd ${SNIC_TMP}
 
 # interleave fastq as required by SortMeRNA
 zcat ${wd}/${sample}_f.aT.notCombined_1.fastq.gz > ${sample}.R1.fastq
-zcat ${wd}/${sample}_f.aT.notCombined_1.fastq.gz > ${sample}.R2.fastq
+zcat ${wd}/${sample}_f.aT.notCombined_2.fastq.gz > ${sample}.R2.fastq
 
 merge-paired-reads.sh \
 ${sample}.R1.fastq \
@@ -230,7 +230,7 @@ cd ${SNIC_TMP}
 
 # interleave fastq as required by SortMeRNA
 zcat ${wd}/${sample}_f.aT.notCombined_1.fastq.gz > ${sample}.R1.fastq
-zcat ${wd}/${sample}_f.aT.notCombined_1.fastq.gz > ${sample}.R2.fastq
+zcat ${wd}/${sample}_f.aT.notCombined_2.fastq.gz > ${sample}.R2.fastq
 
 merge-paired-reads.sh \
 ${sample}.R1.fastq \
