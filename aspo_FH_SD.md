@@ -4,13 +4,12 @@ Run this chunk every time you start or resume an analysis in this doc)
 
 ```bash
 export wd="/pica/v9/b2016308_nobackup/projects/aspo_FH_SD"
+export ordir="/pica/v8/b2013127_nobackup/projects/domeni/aspo"
 ```
 
 Create symlinks of datasets and lists of BioReplicates / TechReplicates
 
 ```bash
-export ordir="/pica/v8/b2013127_nobackup/projects/domeni/aspo"
-
 cd $wd
 ln -s ${ordir}/RNA*/processed_reads/*_?A????A-*_f.aT.extendedFrags.fastq.gz .
 ln -s ${ordir}/RNA*/processed_reads/*_?A????A-*_f.aT.notCombined_?.fastq.gz .
@@ -33,13 +32,14 @@ Run on all reference db simultaneously to get the **unaligned** output (reads us
 
 Need to interleave fastq files first!
 
-- Bacteria
+- Bacterial SSU (PE reads)
 
 ```bash
 cd ${wd}
-for sample in ${samples}; do
-    export sample=${sample}
+mkdir -p sortmerna
+
 sbatch -t 10:00:00 -p node -A b2016308 \
+--array=1-$(wc -l < TechReplicates) \
 -J sortmerna_${sample}_bac.allreads \
 -o sortmerna_${sample}_bac.allreads.out \
 -e sortmerna_${sample}_bac.allreads.err<<'BWE'
@@ -48,12 +48,14 @@ sbatch -t 10:00:00 -p node -A b2016308 \
 module load bioinfo-tools
 module load SortMeRNA/2.1b
 
+sample=$(sed -n "$SLURM_ARRAY_TASK_ID"p TechReplicates)
+
 # move to temporary directory
 cd ${SNIC_TMP}
 
 # interleave fastq as required by SortMeRNA
-zcat ${wd}/${sample}.qtrim1.fastq.gz > ${sample}.R1.fastq
-zcat ${wd}/${sample}.qtrim2.fastq.gz > ${sample}.R2.fastq
+zcat ${wd}/${sample}_f.aT.notCombined_1.fastq.gz > ${sample}.R1.fastq
+zcat ${wd}/${sample}_f.aT.notCombined_1.fastq.gz  > ${sample}.R2.fastq
 
 merge-paired-reads.sh \
 ${sample}.R1.fastq \
@@ -69,18 +71,18 @@ sortmerna --ref $SORTMERNA_DBS/rRNA_databases/silva-bac-16s-id90.fasta,$SORTMERN
 -a 16 -e 1e-20
 
 ls ${sample}_sortmerna_aligned_bacSSU.allreads*
-cp ${sample}_sortmerna_aligned_bacSSU.allreads* $wd
+cp ${sample}_sortmerna_aligned_bacSSU.allreads* ${wd}/sortmerna
 BWE
-done
 ```
 
-- Archaea
+- Archaea SSU
 
 ```bash
 cd ${wd}
-for sample in ${samples}; do
-    export sample=${sample}
+mkdir -p sortmerna
+
 sbatch -t 10:00:00 -p node -A b2016308 \
+--array=1-$(wc -l < TechReplicates) \
 -J sortmerna_${sample}_arc.allreads \
 -o sortmerna_${sample}_arc.allreads.out \
 -e sortmerna_${sample}_arc.allreads.err<<'BWE'
@@ -89,19 +91,21 @@ sbatch -t 10:00:00 -p node -A b2016308 \
 module load bioinfo-tools
 module load SortMeRNA/2.1b
 
+sample=$(sed -n "$SLURM_ARRAY_TASK_ID"p TechReplicates)
+
 # move to temporary directory
 cd ${SNIC_TMP}
 
 # interleave fastq as required by SortMeRNA
-zcat ${wd}/${sample}.qtrim1.fastq.gz > ${sample}.R1.fastq
-zcat ${wd}/${sample}.qtrim2.fastq.gz > ${sample}.R2.fastq
+zcat ${wd}/${sample}_f.aT.notCombined_1.fastq.gz > ${sample}.R1.fastq
+zcat ${wd}/${sample}_f.aT.notCombined_1.fastq.gz  > ${sample}.R2.fastq
 
 merge-paired-reads.sh \
 ${sample}.R1.fastq \
 ${sample}.R2.fastq \
 ${sample}.interleaved.fastq
 
-sortmerna --ref /sw/apps/bioinfo/SortMeRNA/2.1b/milou/sortmerna/rRNA_databases/silva-arc-16s-id95.fasta,/sw/apps/bioinfo/SortMeRNA/2.1b/milou/sortmerna/index/silva-arc-16s-id95 \
+sortmerna --ref $SORTMERNA_DBS/rRNA_databases/silva-arc-16s-id95.fasta,$SORTMERNA_DBS/index/silva-arc-16s-id95 \
 --reads ${sample}.interleaved.fastq \
 --aligned ${sample}_sortmerna_aligned_arcSSU.allreads \
 --paired_in --fastx --log \
@@ -110,7 +114,6 @@ sortmerna --ref /sw/apps/bioinfo/SortMeRNA/2.1b/milou/sortmerna/rRNA_databases/s
 -a 16 -e 1e-20
 
 ls ${sample}_sortmerna_aligned_arcSSU.allreads*
-cp ${sample}_sortmerna_aligned_arcSSU.allreads* $wd
+cp ${sample}_sortmerna_aligned_arcSSU.allreads* ${wd}/sortmerna
 BWE
-done
 ```
