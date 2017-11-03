@@ -45,9 +45,9 @@ mkdir -p sortmerna
 
 sbatch -t 10:00:00 -p node -A b2016308 \
 --array=1-$(wc -l < TechReplicates) \
--J sortmerna_${sample}_getUnal.allreads.PE.%a \
--o sortmerna_${sample}_getUnal.allreads.PE.%a.out \
--e sortmerna_${sample}_getUnal.allreads.PE.%a.err<<'BWE'
+-J sortmerna_getUnal.allreads.PE.%a \
+-o sortmerna_getUnal.allreads.PE.%a.out \
+-e sortmerna_getUnal.allreads.PE.%a.err<<'BWE'
 #!/bin/bash
 
 module load bioinfo-tools
@@ -82,15 +82,15 @@ BWE
 
 - SE reads
 
-```
+```bash
 cd ${wd}
 mkdir -p sortmerna
 
 sbatch -t 10:00:00 -p node -A b2016308 \
 --array=1-$(wc -l < TechReplicates) \
--J sortmerna_${sample}_getUnal.allreads.SE.%a \
--o sortmerna_${sample}_getUnal.allreads.SE.%a.out \
--e sortmerna_${sample}_getUnal.allreads.SE.%a.err<<'BWE'
+-J sortmerna_getUnal.allreads.SE.%a \
+-o sortmerna_getUnal.allreads.SE.%a.out \
+-e sortmerna_getUnal.allreads.SE.%a.err<<'BWE'
 #!/bin/bash
 
 module load bioinfo-tools
@@ -129,9 +129,9 @@ mkdir -p sortmerna
 
 sbatch -t 10:00:00 -p node -A b2016308 \
 --array=1-$(wc -l < TechReplicates) \
--J sortmerna_${sample}_bac.allreads.PE.%a \
--o sortmerna_${sample}_bac.allreads.PE.%a.out \
--e sortmerna_${sample}_bac.allreads.PE.%a.err<<'BWE'
+-J sortmerna_bac.allreads.PE.%a \
+-o sortmerna_bac.allreads.PE.%a.out \
+-e sortmerna_bac.allreads.PE.%a.err<<'BWE'
 #!/bin/bash
 
 module load bioinfo-tools
@@ -172,9 +172,9 @@ mkdir -p sortmerna
 
 sbatch -t 10:00:00 -p node -A b2016308 \
 --array=1-$(wc -l < TechReplicates) \
--J sortmerna_${sample}_arc.allreads.PE.%a \
--o sortmerna_${sample}_arc.allreads.PE.%a.out \
--e sortmerna_${sample}_arc.allreads.PE.%a.err<<'BWE'
+-J sortmerna_arc.allreads.PE.%a \
+-o sortmerna_arc.allreads.PE.%a.out \
+-e sortmerna_arc.allreads.PE.%a.err<<'BWE'
 #!/bin/bash
 
 module load bioinfo-tools
@@ -215,9 +215,9 @@ mkdir -p sortmerna
 
 sbatch -t 10:00:00 -p node -A b2016308 \
 --array=1-$(wc -l < TechReplicates) \
--J sortmerna_${sample}_euk.allreads.PE.%a \
--o sortmerna_${sample}_euk.allreads.PE.%a.out \
--e sortmerna_${sample}_euk.allreads.PE.%a.err<<'BWE'
+-J sortmerna_euk.allreads.PE.%a \
+-o sortmerna_euk.allreads.PE.%a.out \
+-e sortmerna_euk.allreads.PE.%a.err<<'BWE'
 #!/bin/bash
 
 module load bioinfo-tools
@@ -258,9 +258,9 @@ mkdir -p sortmerna
 
 sbatch -t 10:00:00 -p node -A b2016308 \
 --array=1-$(wc -l < TechReplicates) \
--J sortmerna_${sample}_bac.allreads.SE \
--o sortmerna_${sample}_bac.allreads.SE.%a.out \
--e sortmerna_${sample}_bac.allreads.SE.%a.err<<'BWE'
+-J sortmerna_bac.allreads.SE \
+-o sortmerna_bac.allreads.SE.%a.out \
+-e sortmerna_bac.allreads.SE.%a.err<<'BWE'
 #!/bin/bash
 
 module load bioinfo-tools
@@ -295,9 +295,9 @@ mkdir -p sortmerna
 
 sbatch -t 10:00:00 -p node -A b2016308 \
 --array=1-$(wc -l < TechReplicates) \
--J sortmerna_${sample}_arc.allreads.SE \
--o sortmerna_${sample}_arc.allreads.SE.%a.out \
--e sortmerna_${sample}_arc.allreads.SE.%a.err<<'BWE'
+-J sortmerna_arc.allreads.SE \
+-o sortmerna_arc.allreads.SE.%a.out \
+-e sortmerna_arc.allreads.SE.%a.err<<'BWE'
 #!/bin/bash
 
 module load bioinfo-tools
@@ -332,9 +332,9 @@ mkdir -p sortmerna
 
 sbatch -t 10:00:00 -p node -A b2016308 \
 --array=1-$(wc -l < TechReplicates) \
--J sortmerna_${sample}_euk.allreads.SE \
--o sortmerna_${sample}_euk.allreads.SE.%a.out \
--e sortmerna_${sample}_euk.allreads.SE.%a.err<<'BWE'
+-J sortmerna_euk.allreads.SE \
+-o sortmerna_euk.allreads.SE.%a.out \
+-e sortmerna_euk.allreads.SE.%a.err<<'BWE'
 #!/bin/bash
 
 module load bioinfo-tools
