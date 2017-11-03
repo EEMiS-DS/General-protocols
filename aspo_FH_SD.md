@@ -69,14 +69,16 @@ ${sample}.interleaved.fastq
 
 sortmerna --ref $SORTMERNA_DBS/rRNA_databases/rfam-5.8s-database-id98.fasta,$SORTMERNA_DBS/index/rfam-5.8s-database-id98:$SORTMERNA_DBS/rRNA_databases/rfam-5s-database-id98.fasta,$SORTMERNA_DBS/index/rfam-5s-database-id98:$SORTMERNA_DBS/rRNA_databases/silva-arc-16s-id95.fasta,$SORTMERNA_DBS/index/silva-arc-16s-id95:$SORTMERNA_DBS/rRNA_databases/silva-arc-23s-id98.fasta,$SORTMERNA_DBS/index/silva-arc-23s-id98:$SORTMERNA_DBS/rRNA_databases/silva-bac-16s-id90.fasta,$SORTMERNA_DBS/index/silva-bac-16s-id90:$SORTMERNA_DBS/rRNA_databases/silva-bac-23s-id98.fasta,$SORTMERNA_DBS/index/silva-bac-23s-id98:$SORTMERNA_DBS/rRNA_databases/silva-euk-18s-id95.fasta,$SORTMERNA_DBS/index/silva-euk-18s-id95:$SORTMERNA_DBS/rRNA_databases/silva-euk-28s-id98.fasta,$SORTMERNA_DBS/index/silva-euk-28s-id98 \
 --reads ${sample}.interleaved.fastq \
---aligned void \
+--aligned ${sample}_sortmerna_mRNA.PE \
 --other ${sample}_sortmerna_aligned_mRNA.allreads.PE \
---paired_in --fastx --log \
+--paired_in --paired_out --fastx --log \
 --num_alignments 1 \
 -a 16 -e 1e-20
 
 ls ${sample}_sortmerna_aligned_mRNA.allreads.PE*
 cp ${sample}_sortmerna_aligned_mRNA.allreads.PE* ${wd}/sortmerna
+cp ${sample}_sortmerna_mRNA.PE*log ${wd}/sortmerna
+
 BWE
 ```
 
@@ -106,7 +108,7 @@ zcat ${wd}/${sample}_f.aT.extendedFrags.fastq.gz > ${sample}.fastq
 
 sortmerna --ref $SORTMERNA_DBS/rRNA_databases/rfam-5.8s-database-id98.fasta,$SORTMERNA_DBS/index/rfam-5.8s-database-id98:$SORTMERNA_DBS/rRNA_databases/rfam-5s-database-id98.fasta,$SORTMERNA_DBS/index/rfam-5s-database-id98:$SORTMERNA_DBS/rRNA_databases/silva-arc-16s-id95.fasta,$SORTMERNA_DBS/index/silva-arc-16s-id95:$SORTMERNA_DBS/rRNA_databases/silva-arc-23s-id98.fasta,$SORTMERNA_DBS/index/silva-arc-23s-id98:$SORTMERNA_DBS/rRNA_databases/silva-bac-16s-id90.fasta,$SORTMERNA_DBS/index/silva-bac-16s-id90:$SORTMERNA_DBS/rRNA_databases/silva-bac-23s-id98.fasta,$SORTMERNA_DBS/index/silva-bac-23s-id98:$SORTMERNA_DBS/rRNA_databases/silva-euk-18s-id95.fasta,$SORTMERNA_DBS/index/silva-euk-18s-id95:$SORTMERNA_DBS/rRNA_databases/silva-euk-28s-id98.fasta,$SORTMERNA_DBS/index/silva-euk-28s-id98 \
 --reads ${sample}.fastq \
---aligned void \
+--aligned ${sample}_sortmerna_mRNA.SE \
 --other ${sample}_sortmerna_aligned_mRNA.allreads.SE \
 --fastx --log \
 --num_alignments 1 \
@@ -114,6 +116,8 @@ sortmerna --ref $SORTMERNA_DBS/rRNA_databases/rfam-5.8s-database-id98.fasta,$SOR
 
 ls ${sample}_sortmerna_aligned_mRNA.allreads.SE*
 cp ${sample}_sortmerna_aligned_mRNA.allreads.SE* ${wd}/sortmerna
+cp ${sample}_sortmerna_mRNA.SE*log ${wd}/sortmerna
+
 BWE
 ```
 
@@ -360,4 +364,3 @@ ls ${sample}_sortmerna_aligned_eukSSU.allreads.SE*
 cp ${sample}_sortmerna_aligned_eukSSU.allreads.SE* ${wd}/sortmerna
 BWE
 ```
-
