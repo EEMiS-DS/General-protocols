@@ -18,10 +18,10 @@ ln -s ${ordir}/RNA*/processed_reads/*_?A????A-*_f.aT.notCombined_?.fastq.gz .
 for i in $(ls *SA1229A-1R*); do unlink $i; done
 
 # create file with list of technical replicates
-ls | awk 'BEGIN{FS="_";OFS="_"}{print $1, $2}' | sort | uniq > TechReplicates
+ls *fastq.gz | awk 'BEGIN{FS="_";OFS="_"}{print $1, $2}' | sort | uniq > TechReplicates
 
 # create file with list of biological replicates
-ls | awk 'BEGIN{FS="_";OFS="_"}{print $2}' | sort | uniq > BioReplicates
+ls *fastq.gz | awk 'BEGIN{FS="_";OFS="_"}{print $2}' | sort | uniq > BioReplicates
 ```
 
 ### SortMeRNA
