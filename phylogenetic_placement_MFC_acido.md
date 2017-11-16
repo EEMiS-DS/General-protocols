@@ -21,7 +21,7 @@ Always run this first!!!
 # include glob directory
 export PATH=/proj/b2016308/glob/:$PATH
 # working directory
-export wd=""
+export wd="/proj/b2016308/nobackup/projects/danypthesis/MFC/SSU_analysis"
 export samples="P1607_145 P1607_153"
 # reference alignment in phylip format
 export arcSSU_RA="/pica/v9/b2016308_nobackup/projects/TOL/170921/TOS_all.l600.ark.clean.95Gaps.afa.reduced"
