@@ -4,7 +4,7 @@
 
 #### Test workflow from SSU read sorting to phylogenetic placement
 
-**Dataset**: Archaea reads from acidophilic MFC metatranscriptome datasets (Gaofeng). Two replicates: P1607_145 and P1607_153.
+**Dataset**: MFC metatranscriptome datasets (Gaofeng). Two replicates: P1607_145 and P1607_153.
 
 Tools needed:
 - SortMeRNA (available on cluster)
