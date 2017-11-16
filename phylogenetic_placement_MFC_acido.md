@@ -1,7 +1,5 @@
 # Phylogenetic placement of NGS reads
 
-### PaPaRa
-
 #### Test workflow from SSU read sorting to phylogenetic placement
 
 **Dataset**: MFC metatranscriptome datasets (Gaofeng). Two replicates: P1607_145 and P1607_153.
