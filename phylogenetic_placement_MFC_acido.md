@@ -18,6 +18,8 @@ Files needed:
 Always run this first!!!
 
 ```bash
+# include glob directory
+export PATH=/proj/b2016308/glob/:$PATH
 # working directory
 export wd=""
 export samples="P1607_145 P1607_153"
