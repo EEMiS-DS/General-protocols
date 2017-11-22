@@ -42,7 +42,7 @@ sbatch -t 4:00:00 -A b2013127 -p core \
 #!/bin/bash
 
 module load bioinfo-tools
-export PATH=/home/domeni/downloads/kaiju/bin/:$PATH
+export PATH=/proj/b2016308/glob/kaiju/bin/:$PATH
 
 infile=$(sed -n "$SLURM_ARRAY_TASK_ID"p samples)
 
