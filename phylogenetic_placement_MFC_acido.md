@@ -141,7 +141,7 @@ done
 ```bash
 cd $wd
 for sample in ${samples}; do
-    for domain in "arc bac"; do
+    for domain in arc bac; do
         totalAligned=$(grep -vc "^@" ${sample}_sortmerna_aligned_${domain}SSU.allreads.sam)
         orphanAl=$(cat ${sample}_sortmerna_aligned_${domain}SSU.allreads.sam | awk '{count[$1]++}END{ for (j in count) print j, count[j] }' | awk '$2!=2{print $0}')
         let "PE=($totalAligned-$orphanAl)/2"
