@@ -162,7 +162,7 @@ cd ${wd}
 mkdir -p ${sortmernaChunkFolder}
 for sample in ${samples}; do
     export sample=${sample}
-    for domain in "arc bac"; do
+    for domain in arc bac; do
         export domain=${domain}
 sbatch -p core -t 1:00:00 -A b2013127 \
 -J sortProc.${sample}.${domain}.chunks \
