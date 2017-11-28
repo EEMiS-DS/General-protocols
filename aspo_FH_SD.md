@@ -414,3 +414,113 @@ done
 done
 ```
 
+#### PaPaRa
+Needs a reference alignment in phylip format.
+
+```bash
+cd ${wd}
+mkdir -p ${paparaOutFolder}
+
+for domain in arc bac; do
+#for domain in bac; do
+    export domain=${domain}
+    if [[ ${domain} == "arc" ]]
+    then
+        export RT=${arcSSU_RT}
+        export RA=${arcSSU_RA}
+        ls ${sortmernaChunkFolder}/*${domain}SSU*.fa | awk 'BEGIN{FS="/"}{print $NF}' > sortmerna_out_chunks.${domain}.list
+    else
+        export RT=${bacSSU_RT}
+        export RA=${bacSSU_RA}
+        ls ${sortmernaChunkFolder}/*${domain}SSU*.fa | awk 'BEGIN{FS="/"}{print $NF}' > sortmerna_out_chunks.${domain}.list
+    fi
+sbatch -t 10:00:00 -p node -A b2016308 \
+--array=1-$(wc -l < sortmerna_out_chunks.${domain}.list) \
+-J papara_${domain}_%a \
+-o ${paparaOutFolder}/papara_${domain}_%a.out \
+-e ${paparaOutFolder}/papara_${domain}_%a.err \
+--mail-type=ALL --mail-user=domenico.simone@lnu.se<<'BWE'
+#!/bin/bash
+
+# test
+# infile="P1607_145_sortmerna_aligned_bacSSU.allreads.orphans.1.fa"
+infile=$(sed -n "$SLURM_ARRAY_TASK_ID"p sortmerna_out_chunks.${domain}.list)
+
+export PATH=/proj/b2016308/glob/:$PATH
+##for testing
+#export sample=P1607_145
+#export i=R1
+
+cp ${RT} ${SNIC_TMP}
+cp ${RA} ${SNIC_TMP}
+cp ${sortmernaChunkFolder}/${infile} ${SNIC_TMP}
+cd ${SNIC_TMP}
+
+echo "temp folder:"
+ls *
+
+time papara \
+-j 16 \
+-t $(basename ${RT}) \
+-s $(basename ${RA}) \
+-q ${infile} \
+-n ${infile}
+
+tar -cvzf \
+${infile}.papara.tar.gz *
+
+cp \
+${infile}.papara.tar.gz \
+${paparaOutFolder}
+BWE
+done
+```
+
+#### RAxML-EPA
+
+```bash
+mkdir -p ${raxmlEPAChunkFolder}
+
+for domain in arc bac; do
+    export domain=${domain}
+    if [[ ${domain} == "arc" ]]
+    then
+        export RT=${arcSSU_RT}
+    else
+        export RT=${bacSSU_RT}
+    fi
+#salloc -p devcore -n 8 -t 1:00:00 -A b2013127
+sbatch -p core -n 8 -t 20:00:00 -A b2016308 \
+--array=1-$(wc -l < sortmerna_out_chunks.${domain}.list) \
+-J SciLife_raxmlEPA_${domain}_%a \
+-o ${raxmlEPAChunkFolder}/raxmlEPA_${domain}_%a.out \
+-e ${raxmlEPAChunkFolder}/raxmlEPA_${domain}_%a.err<<'EOF'
+#!/bin/bash
+
+module load bioinfo-tools
+module load raxml
+
+infile=$(sed -n "$SLURM_ARRAY_TASK_ID"p sortmerna_out_chunks.${domain}.list)
+
+export paparaOutfile="${paparaOutFolder}/${infile}.papara.tar.gz"
+export alignFile="papara_alignment.${infile}"
+
+# extract papara output to SNIC_TMP
+tar -xvzf ${paparaOutfile} -C ${SNIC_TMP} ${alignFile}
+cp ${RT} ${SNIC_TMP}
+
+cd ${SNIC_TMP}
+raxmlHPC-PTHREADS-AVX -f v \
+-s ${alignFile} \
+-G 0.1 \
+-t ${RT} \
+-m GTRCAT \
+-n ${alignFile} \
+-T 8
+
+tar -cvzf ${infile}.raxmlEPA.tar.gz RAxML_*
+
+cp ${infile}.raxmlEPA.tar.gz ${raxmlEPAChunkFolder}
+EOF
+done
+```
