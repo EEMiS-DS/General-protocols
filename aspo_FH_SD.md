@@ -1,3 +1,9 @@
+# Phylogenetic placement
+
+**TODO**:
+- Euk SSU tree
+- papara+raxml on Euk tree
+
 ### Setup working environment
 
 Run this chunk every time you start or resume an analysis in this doc)
