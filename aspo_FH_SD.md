@@ -5,6 +5,28 @@ Run this chunk every time you start or resume an analysis in this doc)
 ```bash
 export wd="/pica/v9/b2016308_nobackup/projects/aspo_FH_SD"
 export ordir="/pica/v8/b2013127_nobackup/projects/domeni/aspo"
+
+# folder with shared tools, scripts etc.
+export PATH=/proj/b2016308/glob:$PATH
+
+# sample sin this case are datasets from single lanes (one BioReplicate can have more than one)
+export samples=$(cat $wd/TechReplicates)
+
+# reference alignment in phylip format
+export arcSSU_RA="/proj/b2016308/glob/TOS_all.l600.ark.clean.95Gaps.afa.reduced"
+export bacSSU_RA="/proj/b2016308/glob/TOS_all.l600.bac.clean.95Gaps.afa.reduced"
+# reference tree in newick format
+export arcSSU_RT="/proj/b2016308/glob/RAxML_bipartitionsBranchLabels.TOS_all.l600.ark.clean.95Gaps.reduced_n4"
+export bacSSU_RT="/proj/b2016308/glob/RAxML_bipartitionsBranchLabels.TOS_all.l600.bac.clean.95Gaps.reduced_n4"
+
+# output folders
+export sortmernaChunkFolder=${wd}/sortmerna_out_chunks
+export paparaOutFolder=${wd}/papara_out_chunks
+export raxmlEPAChunkFolder=${wd}/raxmlEPA_out_chunks
+
+mkdir -p ${sortmernaChunkFolder}
+mkdir -p ${paparaOutFolder}
+mkdir -p ${raxmlEPAChunkFolder}
 ```
 
 Create symlinks of datasets and lists of BioReplicates / TechReplicates
@@ -364,3 +386,31 @@ ls ${sample}_sortmerna_aligned_eukSSU.allreads.SE*
 cp ${sample}_sortmerna_aligned_eukSSU.allreads.SE* ${wd}/sortmerna
 BWE
 ```
+
+- Process sam output with script `processSortMeRNAsam.chunks.py` to get:
+    - R1 file
+    - R2 file
+    - orphan read file
+
+```bash
+cd ${wd}
+mkdir -p ${sortmernaChunkFolder}
+for sample in ${samples}; do
+    export sample=${sample}
+    for domain in arc bac euk; do
+        export domain=${domain}
+sbatch -p core -t 1:00:00 -A b2013127 \
+-J sortProc.${sample}.${domain}.chunks \
+-o ${sortmernaChunkFolder}/sortProc.${sample}.${domain}.chunks.out \
+-e ${sortmernaChunkFolder}/sortProc.${sample}.${domain}.chunks.err<<'EOF'
+#!/bin/bash
+
+processSortMeRNAsam.chunks.opts.py \
+--infile=sortmerna/${sample}_sortmerna_aligned_${domain}SSU.allreads.PE.sam \
+--outdir=${sortmernaChunkFolder} \
+--chunk_size=400000
+EOF
+done
+done
+```
+
