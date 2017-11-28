@@ -498,7 +498,7 @@ for domain in arc bac; do
 #salloc -p devcore -n 8 -t 1:00:00 -A b2013127
 sbatch -p core -n 8 -t 20:00:00 -A b2016308 \
 --array=1-$(wc -l < sortmerna_out_chunks.${domain}.list) \
--J SciLife_raxmlEPA_${domain}_%a \
+-J raxmlEPA_${domain}_%a \
 -o ${raxmlEPAChunkFolder}/raxmlEPA_${domain}_%a.out \
 -e ${raxmlEPAChunkFolder}/raxmlEPA_${domain}_%a.err<<'EOF'
 #!/bin/bash
