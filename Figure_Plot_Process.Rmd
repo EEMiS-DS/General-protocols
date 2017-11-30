@@ -1,0 +1,729 @@
+---
+title: "Figure Plot/Process"
+author: "Domenico Simone"
+date: "November 13th, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(RColorBrewer)
+```
+
+## Figure Plot/Process
+
+Workflow:
+
+- attach taxonomic, functional data to coassembly
+- merge with abundances.
+
+Define function to merge abundance, taxonomic, functional data
+
+We need to perform a **full join** of the three datasets (Counts, Taxonomic assignments, Annotations). From this function, for each sample we'll obtain two tables:
+
+- transcripts with both taxonomic and functional (Pfam/GO) annotation;
+- transcripts with taxonomic annotation only.
+
+**NEW STUFF**
+
+Function to read RSEM outputs and keep gene_id (transcript) and TPMs.
+
+```{r}
+parseRSEMabundance.genes <- function(tpm.file, sample.name){
+  tpm.data <- read.table(file = tpm.file, header=TRUE, stringsAsFactors = FALSE)
+  colnames(tpm.data) <- c("gene_id2drop", "gene_id", "length", "effLength", "exp_count", "TPM", "FPKM")
+  tpm.data <- subset(tpm.data, select = c(gene_id, TPM))
+  colnames(tpm.data) <- c("gene_id", sample.name)
+  return(tpm.data)
+}
+
+parseRSEMabundance.isoforms <- function(tpm.file, sample.name){
+  tpm.data <- read.table(file = tpm.file, header=TRUE, stringsAsFactors = FALSE)
+  colnames(tpm.data) <- c("gene_id", "gene_id2drop", "length", "effLength", "exp_count", "TPM", "FPKM", "IsoPct")
+  tpm.data <- subset(tpm.data, select = c(gene_id, TPM))
+  colnames(tpm.data) <- c("gene_id", sample.name)
+  return(tpm.data)
+}
+```
+
+Function to parse kaiju outputs
+
+```{r}
+parseKaijuNames <- function(tax.file){
+  tax.data <- read.csv(file = tax.file, header = FALSE, sep = "\t", stringsAsFactors = FALSE)
+  colnames(tax.data) <- c("status", "gene_id", "taxID", "taxonomy")
+  return(tax.data)
+}
+```
+
+Read abundances in samples and merge tables
+
+```{r}
+ab.101 <- parseRSEMabundance.isoforms("101_rsem_trinity_all_nophix.isoforms.results", "c101")
+ab.102 <- parseRSEMabundance.isoforms("102_rsem_trinity_all_nophix.isoforms.results", "c102")
+ab.103 <- parseRSEMabundance.isoforms("103_rsem_trinity_all_nophix.isoforms.results", "c103")
+ab.104 <- parseRSEMabundance.isoforms("104_rsem_trinity_all_nophix.isoforms.results", "c104")
+
+ab.all <- Reduce(function(dtf1, dtf2) merge(dtf1, dtf2, by="gene_id", all = TRUE), list(ab.101, ab.102, ab.103, ab.104))
+```
+
+**Trinotate table**
+
+Check GO annotations:
+
+Get table with two columns, one with GO ann from BLAST hits and one with GO ann from Pfam, process with
+
+```{python}
+a = open('Trinotate_go_blast_pfam', 'r')
+
+all = 0
+no = 0
+both = 0
+onlyBlast = 0
+onlyPfam = 0
+for l in a:
+    all += 1
+    l = l.split()
+    if l[0] == '0' and l[1] == '0':
+        no += 1
+    elif l[0] == '0':
+        onlyBlast += 1
+    elif l[1] == '0':
+        onlyPfam += 1
+    else:
+        both += 1
+```
+
+Results:
+
+```
+all: 105068
+both: 15285
+onlyPfam: 56
+onlyBlast: 709
+no: 89017
+```
+
+So we'll use Pfam annotations.
+Let's rework the table so we get these fields:
+- transcript id (c2)
+- Pfam (c8) (though we're probably not going to use them)
+- gene_ontology Pfam, to be splitted in three fields:
+  - Component
+  - Process
+  - Function
+
+```{python}
+
+def joinAnn(list):
+  list.sort()
+  return ','.join(list)
+
+intable = open('Trinotate_coassembly.csv', 'r')
+outtable = open('Trinotate_coassembly.edit.csv', 'w')
+
+# write out header
+outtable.write('\t'.join(["gene_id", "PfamID", "GO_component", "GO_process", "GO_function"])+'\n')
+
+# process file
+i = intable.next()
+for i in intable:
+  i = i.strip().split("\t")
+  #print i
+  gene_id = i[1]
+  PfamID = i[7].replace(' ', '_')
+  GO = i[13]
+  GO_aspects = GO.split('`')
+  GO_anns = { "molecular_function" : [], "biological_process" : [], "cellular_component" : []}
+  for GO_ann in GO_aspects:
+    # eg "GO:0004129^molecular_function^cytochrome-c oxidase activity"
+    try:
+      GO_ID, GO_aspect, GO_description = GO_ann.split('^')
+      GO_anns[GO_aspect].append("%s|%s" % (GO_ID, GO_description.replace(' ', '_')))
+    except:
+      pass
+  outtable.write('\t'.join([gene_id, PfamID, joinAnn(GO_anns["cellular_component"]), joinAnn(GO_anns["biological_process"]), joinAnn(GO_anns["molecular_function"])])+'\n')
+
+outtable.close()
+```
+
+Read new data
+
+```{r}
+indata <- read.table(file = "Trinotate_coassembly.edit.csv", header = TRUE, sep = "\t", quote = "", stringsAsFactors = FALSE)
+```
+
+Merge new data with abundances
+
+```{r}
+indata.ab <- merge(indata, ab.all, all = TRUE)
+```
+
+Read tax file, attach phylum, genus and species. Get genera and species from kaiju outputs.
+
+```{r}
+assignGenus <- function(s, genusArray){
+  k <- s
+  k$Genus <- ""
+  for(i in 1:length(k$Genus)){
+    taxonomy <- strsplit(k$taxonomy[i], "; ")
+    if(length(taxonomy[[1]]) > 0)
+      for(j in 1:length(taxonomy[[1]])){
+        if(taxonomy[[1]][j] %in% genusArray)
+          k$Genus[i] <- taxonomy[[1]][j]
+    } 
+  }
+  return(k)
+}
+
+assignSpecies <- function(s, speciesArray){
+  k <- s
+  k$Species <- ""
+  for(i in 1:length(k$Species)){
+    taxonomy <- strsplit(k$taxonomy[i], "; ")
+    if(length(taxonomy[[1]]) > 0)
+      for(j in 1:length(taxonomy[[1]])){
+        if(taxonomy[[1]][j] %in% speciesArray)
+          k$Species[i] <- taxonomy[[1]][j]
+    } 
+  }
+  return(k)
+}
+
+taxData <- parseKaijuNames("Trinity_all.kaiju-names.out")
+genusData <- read.table(file = "Trinity_all.kaiju.out.genus.summary", stringsAsFactors = FALSE, skip = 2, strip.white = TRUE, quote = "", sep = "\t", comment.char = "-")$V3
+speciesData <- read.table(file = "Trinity_all.kaiju.out.species.summary", stringsAsFactors = FALSE, skip = 2, strip.white = TRUE, quote = "", sep = "\t", comment.char = "-")$V3
+
+taxData.genus <- assignGenus(taxData, genusData)
+taxData.genus.species <- assignSpecies(taxData.genus, speciesData)
+
+bacterial.phyla <- read.csv("Bacterial_phyla", header = FALSE, stringsAsFactors = FALSE)
+archaeal.phyla <- read.csv("Archaeal_phyla", header = FALSE, stringsAsFactors = FALSE)
+eukarya.phyla <- read.csv("Eukarya_phyla", header = FALSE, stringsAsFactors = FALSE)
+all.phyla <- c(bacterial.phyla$V1, archaeal.phyla$V1, eukarya.phyla$V1)
+
+# populate phylum column with Unknown and then domain as default value
+taxData.genus.species$Phylum <- "Unknown"
+taxData.genus.species$Phylum[grepl("Bacteria", taxData.genus.species$taxonomy)] <- "Bacteria"
+taxData.genus.species$Phylum[grepl("Archaea", taxData.genus.species$taxonomy)] <- "Archaea"
+taxData.genus.species$Phylum[grepl("Eukaryota", taxData.genus.species$taxonomy)] <- "Eukaryota"
+
+for(i in 1:length(all.phyla)){
+  #print(bacterial.phyla$phylum[i])
+  taxData.genus.species$Phylum[grepl(paste(" ", all.phyla[i], ";", sep = ""), taxData.genus.species$taxonomy)] <- all.phyla[i]
+}
+```
+
+Merge tax with abundance/functional data
+
+```{r}
+indata.ab.taxData <- merge(indata.ab, taxData.genus.species, all = TRUE)
+```
+
+**Get data for Krona plots (to be continued)**
+
+Get overview (process) for each taxon
+
+TPM - Phylum - Genus - Species - GO-aspect
+
+```{r}
+data.101 <- indata.ab.taxData[!names(indata.ab.taxData) %in% c("c102", "c103", "c104")]
+data.101.overview.krona <- subset(data.101, c101 > 0, select = c(c101, Phylum, Genus, Species, GO_process))
+write.table(data.101.overview.krona, file = "data.101.overview.krona", sep = "\t", row.names = FALSE, quote = FALSE)
+
+data.102 <- indata.ab.taxData[!names(indata.ab.taxData) %in% c("c101", "c103", "c104")]
+data.102.overview.krona <- subset(data.102, c102 > 0, select = c(c102, Phylum, Genus, Species, GO_process))
+write.table(data.102.overview.krona, file = "data.102.overview.krona", sep = "\t", row.names = FALSE, quote = FALSE)
+
+data.103 <- indata.ab.taxData[!names(indata.ab.taxData) %in% c("c101", "c102", "c104")]
+data.103.overview.krona <- subset(data.103, c103 > 0, select = c(c103, Phylum, Genus, Species, GO_process))
+write.table(data.103.overview.krona, file = "data.103.overview.krona", sep = "\t", row.names = FALSE, quote = FALSE)
+
+data.104 <- indata.ab.taxData[!names(indata.ab.taxData) %in% c("c101", "c102", "c103")]
+data.104.overview.krona <- subset(data.104, c104 > 0, select = c(c104, Phylum, Genus, Species, GO_process))
+write.table(data.104.overview.krona, file = "data.104.overview.krona", sep = "\t", row.names = FALSE, quote = FALSE)
+```
+
+TPM - GO-aspect - Phylum - Genus - PfamID_description
+
+Split datasets for sample+GO aspect. Example on sample 101, GO aspect = Process.
+
+```{r}
+data.101 <- indata.ab.taxData[!names(indata.ab.taxData) %in% c("c102", "c103", "c104")]
+data.101.process <- data.101[!names(data.101) %in% c("GO_component", "GO_function")]
+data.101.process <- subset(data.101.process, GO_process != "")
+data.101.process <- subset(data.101.process, c101 != 0)
+data.101.process.krona <- subset(data.101.process, select = c(c101, GO_process, Phylum, Genus, Species))
+
+write.table(data.101.process.krona, file = "data.101.process.krona", sep = "\t", row.names = FALSE, quote = FALSE)
+# ktImportText -o data.101.process.krona.html data.101.process.krona
+```
+
+**Summary tables**
+
+- Summary genus
+
+```{r}
+data.101.overview.krona.summaryGenus <- aggregate(data.101.overview.krona$c101, by = list(data.101.overview.krona$Genus), FUN = sum)
+colnames(data.101.overview.krona.summaryGenus) <- c("Genus", "c101")
+
+data.102.overview.krona.summaryGenus <- aggregate(data.102.overview.krona$c102, by = list(data.102.overview.krona$Genus), FUN = sum)
+colnames(data.102.overview.krona.summaryGenus) <- c("Genus", "c102")
+
+data.103.overview.krona.summaryGenus <- aggregate(data.103.overview.krona$c103, by = list(data.103.overview.krona$Genus), FUN = sum)
+colnames(data.103.overview.krona.summaryGenus) <- c("Genus", "c103")
+
+data.104.overview.krona.summaryGenus <- aggregate(data.104.overview.krona$c104, by = list(data.104.overview.krona$Genus), FUN = sum)
+colnames(data.104.overview.krona.summaryGenus) <- c("Genus", "c104")
+
+data.all.summaryGenus <- Reduce(function(dtf1, dtf2) merge(dtf1, dtf2, by="Genus", all = TRUE), list(data.101.overview.krona.summaryGenus, data.102.overview.krona.summaryGenus, data.103.overview.krona.summaryGenus, data.104.overview.krona.summaryGenus))
+
+# replace NAs with 0s
+data.all.summaryGenus[is.na(data.all.summaryGenus)] <- 0
+
+# write out to table
+write.table(data.all.summaryGenus, file = "data.all.summaryGenus.csv", sep = "\t", row.names = FALSE, quote = FALSE)
+```
+
+- Summary process
+
+```{r}
+data.101.overview.krona.summaryProcess <- aggregate(data.101.overview.krona$c101, by = list(data.101.overview.krona$GO_process), FUN = sum)
+colnames(data.101.overview.krona.summaryProcess) <- c("GO_process", "c101")
+
+data.102.overview.krona.summaryProcess <- aggregate(data.102.overview.krona$c102, by = list(data.102.overview.krona$GO_process), FUN = sum)
+colnames(data.102.overview.krona.summaryProcess) <- c("GO_process", "c102")
+
+data.103.overview.krona.summaryProcess <- aggregate(data.103.overview.krona$c103, by = list(data.103.overview.krona$GO_process), FUN = sum)
+colnames(data.103.overview.krona.summaryProcess) <- c("GO_process", "c103")
+
+data.104.overview.krona.summaryProcess <- aggregate(data.104.overview.krona$c104, by = list(data.104.overview.krona$GO_process), FUN = sum)
+colnames(data.104.overview.krona.summaryProcess) <- c("GO_process", "c104")
+
+data.all.summaryProcess <- Reduce(function(dtf1, dtf2) merge(dtf1, dtf2, by="GO_process", all = TRUE), list(data.101.overview.krona.summaryProcess, data.102.overview.krona.summaryProcess, data.103.overview.krona.summaryProcess, data.104.overview.krona.summaryProcess))
+
+# replace NAs with 0s
+data.all.summaryProcess[is.na(data.all.summaryProcess)] <- 0
+
+# write out to table
+write.table(data.all.summaryProcess, file = "data.all.summaryProcess.csv", sep = "\t", row.names = FALSE, quote = FALSE)
+```
+
+**Figure with gene abundances**
+
+We need to attach gene names (column `sprot_Top_BLASTX_hit`). Take them from original table `Trinity_coassembly.csv`.
+
+```{r}
+indata.geneNames <- read.csv(file = "Trinotate_coassembly.csv", fill = TRUE, header = TRUE, sep = "\t", stringsAsFactors = FALSE, strip.white = TRUE)
+indata.geneNames <- subset(indata.geneNames, select = c(transcript_id, sprot_Top_BLASTX_hit, sprot_Top_BLASTP_hit, Pfam))
+colnames(indata.geneNames) <- c("gene_id", "sprot_Top_BLASTX_hit", "sprot_Top_BLASTP_hit", "Pfam") 
+
+# merge with big table
+indata.ab.taxData.geneNames <- merge(indata.ab.taxData, indata.geneNames, by = "gene_id", all.x = TRUE)
+indata.ab.taxData.geneNames <- subset(indata.ab.taxData.geneNames, select = -Pfam)
+
+# get names from blastx and blastp
+indata.ab.taxData.geneNames$gene_name_blastx <- colsplit(indata.ab.taxData.geneNames$sprot_Top_BLASTX_hit, "_", c("gene_name_blastx", "shit"))$gene_name_blastx
+
+indata.ab.taxData.geneNames$gene_name_blastp <- colsplit(indata.ab.taxData.geneNames$sprot_Top_BLASTP_hit, "_", c("gene_name_blastp", "shit"))$gene_name_blastp
+
+# collect non-zero values in another column
+indata.ab.taxData.geneNames$gene_name <- 0
+
+for(i in 1:length(indata.ab.taxData.geneNames$gene_name)){
+  #print(bacterial.phyla$phylum[i])
+  if(indata.ab.taxData.geneNames$gene_name_blastx[i] == "0"){
+    if(indata.ab.taxData.geneNames$gene_name_blastp[i] != "0"){
+      indata.ab.taxData.geneNames$gene_name[i] <- indata.ab.taxData.geneNames$gene_name_blastp[i]
+    }
+  }else{
+    indata.ab.taxData.geneNames$gene_name[i] <- indata.ab.taxData.geneNames$gene_name_blastx[i]
+  }
+}
+```
+
+Subselect gene_name, abundances in samples, Genus
+
+```{r}
+indata.genes.genera <- subset(indata.ab.taxData.geneNames, select = c(gene_name, Genus, c101, c102, c103, c104))
+indata.genes.genera$Genus <- sub("^$", "Unknown", indata.genes.genera$Genus)
+indata.genes.genera.long <- gather(indata.genes.genera, "sample", "abundance", 3:6)
+indata.genes.genera.long.aggr <- indata.genes.genera.long %>% group_by(gene_name, Genus, sample) %>% summarise(sum(abundance))
+colnames(indata.genes.genera.long.aggr)[4] <- "abundance"
+```
+
+Subset genes of interest (no longer used!!!)
+
+```{r}
+genes_interest <- read.table("~/Dropbox/Research/lnu/RStudio_projs/FigureProcessPhylum_kaijuSEG_171115/genes_interest", quote="\"", comment.char="", stringsAsFactors=FALSE)
+colnames(genes_interest) <- c("gene_name")
+indata.genes.genera.long.aggr.gi <- subset(indata.genes.genera.long.aggr, indata.genes.genera.long.aggr$gene_name %in% genes_interest$gene_name )
+indata.genes.genera.long.aggr.gi$Genus <- sub("^$", "Unknown", indata.genes.genera.long.aggr.gi$Genus)
+```
+
+**UPDATE NOV 21th, 2017**
+
+We want to aggregate counts based on "operon", subsetting groups of genes, and plot them.
+
+- Create general table
+
+```{r}
+# create new column with first three characters of the gene name
+indata.genes.genera.long.aggr$operon <- substr(indata.genes.genera.long.aggr$gene_name, 1, 3)
+#indata.genes.genera.long.aggr$Genus <- sub("^$", "Unknown", indata.genes.genera.long.aggr$Genus)
+```
+
+Eg genes for SCN- and CN- degradation.
+
+```{r}
+indata.genes.genera.long.aggr.sulph.ox <- subset(indata.genes.genera.long.aggr, operon %in% c("SCN", "CYN", "CYD", "CYC"))
+
+indata.genes.genera.long.aggr.scn.cn <- aggregate(abundance~operon+Genus+sample, data = indata.genes.genera.long.aggr.scn.cn, sum)
+
+# fill missing combinations operon-Genus-sample
+indata.genes.genera.long.aggr.scn.cn <- indata.genes.genera.long.aggr.scn.cn %>% complete(operon, Genus, sample, fill = list(abundance = 0))
+
+# add rows with total counts
+indata.genes.genera.long.aggr.scn.cn.total <- indata.genes.genera.long.aggr.scn.cn %>% group_by(operon, sample) %>% summarise(abundance=sum(abundance))
+indata.genes.genera.long.aggr.scn.cn.total$Genus <- "Total"
+indata.genes.genera.long.aggr.scn.cn <- bind_rows(indata.genes.genera.long.aggr.scn.cn, indata.genes.genera.long.aggr.scn.cn.total)
+
+# generate palette from http://tools.medialab.sciences-po.fr/iwanthue/index.php
+# then switch the one before last one to black for the total
+c2use <- c("#4cc186",
+"#5c3788",
+"#9ab03e",
+"#6f71d9",
+"#d09538",
+"#6888d4",
+"#639a49",
+"#ca73c6",
+"#33d4d1",
+"#bb5338",
+"#b1457b",
+"#000000",
+"#ba4758")
+ggplot(data = indata.genes.genera.long.aggr.scn.cn, aes(x=factor(sample), y=abundance+1, fill=Genus)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values=c2use) +
+  #stat_summary(fun.y = "sum", color = "black", geom = "bar", position = "dodge") +
+  facet_grid(operon ~ sample, scales = "free_x") +
+  scale_y_log10()
+
+# export data
+write.table(indata.genes.genera.long.aggr.scn.cn, file = "indata.genes.genera.long.aggr.scn.cn.tsv", sep = "\t", row.names = FALSE)
+```
+
+Genes for sulphur oxidation
+
+```{r}
+indata.genes.genera.long.aggr.sulph.ox <- subset(indata.genes.genera.long.aggr, operon %in% c("SOX", "DSR", "APR"))
+
+indata.genes.genera.long.aggr.sulph.ox <- aggregate(abundance~operon+Genus+sample, data = indata.genes.genera.long.aggr.sulph.ox, sum)
+
+# fill missing combinations operon-Genus-sample
+indata.genes.genera.long.aggr.sulph.ox <- indata.genes.genera.long.aggr.sulph.ox %>% complete(operon, Genus, sample, fill = list(abundance = 0))
+
+# add rows with total counts
+indata.genes.genera.long.aggr.sulph.ox.total <- indata.genes.genera.long.aggr.sulph.ox %>% group_by(operon, sample) %>% summarise(abundance=sum(abundance))
+indata.genes.genera.long.aggr.sulph.ox.total$Genus <- "Total"
+indata.genes.genera.long.aggr.sulph.ox <- bind_rows(indata.genes.genera.long.aggr.sulph.ox, indata.genes.genera.long.aggr.sulph.ox.total)
+
+# generate palette from http://tools.medialab.sciences-po.fr/iwanthue/index.php
+# then switch the one before last one to black for the total
+c2use <- c("#55eea3",
+"#ff58a5",
+"#007c2f",
+"#398dff",
+"#80ab1e",
+"#000000",
+"#957e00")
+ggplot(data = indata.genes.genera.long.aggr.sulph.ox, aes(x=factor(sample), y=abundance+1, fill=Genus)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values=c2use) +
+  #stat_summary(fun.y = "sum", color = "black", geom = "bar", position = "dodge") +
+  facet_grid(operon ~ sample, scales = "free_x") +
+  scale_y_log10()
+
+# export data
+write.table(indata.genes.genera.long.aggr.sulph.ox, file = "indata.genes.genera.long.aggr.sulph.ox.tsv", sep = "\t", row.names = FALSE)
+```
+
+Genes for sulphite oxidation
+
+```{r}
+indata.genes.genera.long.aggr.sulphite.ox <- subset(indata.genes.genera.long.aggr, operon %in% c("SAT", "TUS", "RHD"))
+
+indata.genes.genera.long.aggr.sulphite.ox <- aggregate(abundance~operon+Genus+sample, data = indata.genes.genera.long.aggr.sulphite.ox, sum)
+
+# fill missing combinations operon-Genus-sample
+indata.genes.genera.long.aggr.sulphite.ox <- indata.genes.genera.long.aggr.sulphite.ox %>% complete(operon, Genus, sample, fill = list(abundance = 0))
+
+# add rows with total counts
+indata.genes.genera.long.aggr.sulphite.ox.total <- indata.genes.genera.long.aggr.sulphite.ox %>% group_by(operon, sample) %>% summarise(abundance=sum(abundance))
+indata.genes.genera.long.aggr.sulphite.ox.total$Genus <- "Total"
+indata.genes.genera.long.aggr.sulphite.ox <- bind_rows(indata.genes.genera.long.aggr.sulphite.ox, indata.genes.genera.long.aggr.sulphite.ox.total)
+
+# generate palette from http://tools.medialab.sciences-po.fr/iwanthue/index.php
+# then switch the one before last one to black for the total
+c2use <- c("#8a0004",
+"#32d97e",
+"#000000",
+"#ffb247")
+ggplot(data = indata.genes.genera.long.aggr.sulphite.ox, aes(x=factor(sample), y=abundance+1, fill=Genus)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values=c2use) +
+  #stat_summary(fun.y = "sum", color = "black", geom = "bar", position = "dodge") +
+  facet_grid(operon ~ sample, scales = "free_x") +
+  scale_y_log10()
+
+# export data
+write.table(indata.genes.genera.long.aggr.sulphite.ox, file = "indata.genes.genera.long.aggr.sulphite.ox.tsv", sep = "\t", row.names = FALSE)
+```
+
+Energy conservation
+
+```{r}
+indata.genes.genera.long.aggr.ec <- subset(indata.genes.genera.long.aggr, operon %in% c("SDH", "PET", "UBI", "NDH", "APP", "PIL"))
+
+indata.genes.genera.long.aggr.ec <- aggregate(abundance~operon+Genus+sample, data = indata.genes.genera.long.aggr.ec, sum)
+
+# fill missing combinations operon-Genus-sample
+indata.genes.genera.long.aggr.ec <- indata.genes.genera.long.aggr.ec %>% complete(operon, Genus, sample, fill = list(abundance = 0))
+
+# add rows with total counts
+indata.genes.genera.long.aggr.ec.total <- indata.genes.genera.long.aggr.ec %>% group_by(operon, sample) %>% summarise(abundance=sum(abundance))
+indata.genes.genera.long.aggr.ec.total$Genus <- "Total"
+indata.genes.genera.long.aggr.ec <- bind_rows(indata.genes.genera.long.aggr.ec, indata.genes.genera.long.aggr.ec.total)
+
+# generate palette from http://tools.medialab.sciences-po.fr/iwanthue/index.php
+# then switch the one before last one to black for the total
+c2use <- c("#efd367",
+"#3a0563",
+"#9fdb57",
+"#88007d",
+"#00b259",
+"#d288ff",
+"#819500",
+"#00428f",
+"#b2e380",
+"#d2257d",
+"#009c5e",
+"#ff89d8",
+"#a07800",
+"#02bcf5",
+"#6f0010",
+"#dcd881",
+"#9b578d",
+"#000000",
+"#ff6d7c")
+ggplot(data = indata.genes.genera.long.aggr.ec, aes(x=factor(sample), y=abundance+1, fill=Genus)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values=c2use) +
+  #stat_summary(fun.y = "sum", color = "black", geom = "bar", position = "dodge") +
+  facet_grid(operon ~ sample, scales = "free_x") +
+  scale_y_log10()
+
+# export data CHANGE THIS
+write.table(indata.genes.genera.long.aggr.ec, file = "indata.genes.genera.long.aggr.ec.tsv", sep = "\t", row.names = FALSE)
+```
+
+Biofilm formation
+
+```{r}
+indata.genes.genera.long.aggr.biofilm <- subset(indata.genes.genera.long.aggr, operon %in% c("FUM", "SUR", "PGA", "RLM", "YCD"))
+
+indata.genes.genera.long.aggr.biofilm <- aggregate(abundance~operon+Genus+sample, data = indata.genes.genera.long.aggr.biofilm, sum)
+
+# fill missing combinations operon-Genus-sample
+indata.genes.genera.long.aggr.biofilm <- indata.genes.genera.long.aggr.biofilm %>% complete(operon, Genus, sample, fill = list(abundance = 0))
+
+# add rows with total counts
+indata.genes.genera.long.aggr.biofilm.total <- indata.genes.genera.long.aggr.biofilm %>% group_by(operon, sample) %>% summarise(abundance=sum(abundance))
+indata.genes.genera.long.aggr.biofilm.total$Genus <- "Total"
+indata.genes.genera.long.aggr.biofilm <- bind_rows(indata.genes.genera.long.aggr.biofilm, indata.genes.genera.long.aggr.biofilm.total)
+
+# generate palette from http://tools.medialab.sciences-po.fr/iwanthue/index.php
+# then switch the one before last one to black for the total
+c2use <- c("#3d7b00",
+"#bc36a0",
+"#bf3b1b",
+"#013b99",
+"#611300",
+"#0066bb",
+"#d52165",
+"#000000",
+"#d8b2ff")
+ggplot(data = indata.genes.genera.long.aggr.biofilm, aes(x=factor(sample), y=abundance+1, fill=Genus)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values=c2use) +
+  #stat_summary(fun.y = "sum", color = "black", geom = "bar", position = "dodge") +
+  facet_grid(operon ~ sample, scales = "free_x") +
+  scale_y_log10()
+
+# write out data
+write.table(indata.genes.genera.long.aggr.biofilm, file = "indata.genes.genera.long.aggr.biofilm.tsv", sep = "\t", row.names = FALSE)
+```
+
+Nitrogen cycling
+
+```{r}
+indata.genes.genera.long.aggr.ncyc <- subset(indata.genes.genera.long.aggr, operon %in% c("NAR", "NIR", "NOR", "NOS"))
+
+indata.genes.genera.long.aggr.ncyc <- aggregate(abundance~operon+Genus+sample, data = indata.genes.genera.long.aggr.ncyc, sum)
+
+# fill missing combinations operon-Genus-sample
+indata.genes.genera.long.aggr.ncyc <- indata.genes.genera.long.aggr.ncyc %>% complete(operon, Genus, sample, fill = list(abundance = 0))
+
+# add rows with total counts
+indata.genes.genera.long.aggr.ncyc.total <- indata.genes.genera.long.aggr.ncyc %>% group_by(operon, sample) %>% summarise(abundance=sum(abundance))
+indata.genes.genera.long.aggr.ncyc.total$Genus <- "Total"
+indata.genes.genera.long.aggr.ncyc <- bind_rows(indata.genes.genera.long.aggr.ncyc, indata.genes.genera.long.aggr.ncyc.total)
+
+# generate palette from http://tools.medialab.sciences-po.fr/iwanthue/index.php
+# then switch the one before last one to black for the total
+c2use <- c("#81e9a0",
+"#a932a1",
+"#52b543",
+"#cc72e7",
+"#758b00",
+"#003b8e",
+"#d1dc6f",
+"#0067bd",
+"#d08906",
+"#dfa1ff",
+"#019168",
+"#f95cb5",
+"#ffaf57",
+"#513a78",
+"#b44500",
+"#f3447a",
+"#814f00",
+"#ff8f65",
+"#8b0900",
+"#000000",
+"#8a6227")
+ggplot(data = indata.genes.genera.long.aggr.ncyc, aes(x=factor(sample), y=abundance+1, fill=Genus)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values=c2use) +
+  #stat_summary(fun.y = "sum", color = "black", geom = "bar", position = "dodge") +
+  facet_grid(operon ~ sample, scales = "free_x") +
+  scale_y_log10()
+
+# write out data
+write.table(indata.genes.genera.long.aggr.ncyc, file = "indata.genes.genera.long.aggr.ncyc.tsv", sep = "\t", row.names = FALSE)
+```
+
+Carbon fixation
+
+```{r}
+indata.genes.genera.long.aggr.carb <- subset(indata.genes.genera.long.aggr, operon %in% c("CBB"))
+
+indata.genes.genera.long.aggr.carb <- aggregate(abundance~operon+Genus+sample, data = indata.genes.genera.long.aggr.carb, sum)
+
+# fill missing combinations operon-Genus-sample
+indata.genes.genera.long.aggr.carb <- indata.genes.genera.long.aggr.carb %>% complete(operon, Genus, sample, fill = list(abundance = 0))
+
+# add rows with total counts
+indata.genes.genera.long.aggr.carb.total <- indata.genes.genera.long.aggr.carb %>% group_by(operon, sample) %>% summarise(abundance=sum(abundance))
+indata.genes.genera.long.aggr.carb.total$Genus <- "Total"
+indata.genes.genera.long.aggr.carb <- bind_rows(indata.genes.genera.long.aggr.carb, indata.genes.genera.long.aggr.carb.total)
+
+# generate palette from http://tools.medialab.sciences-po.fr/iwanthue/index.php
+# then switch the one before last one to black for the total
+c2use <- c(c2use <- c("#3d7b00",
+"#bc36a0",
+"#000000",
+"#013b99"))
+
+ggplot(data = indata.genes.genera.long.aggr.carb, aes(x=factor(sample), y=abundance+1, fill=Genus)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values=c2use) +
+  #stat_summary(fun.y = "sum", color = "black", geom = "bar", position = "dodge") +
+  facet_grid(operon ~ sample, scales = "free_x") +
+  scale_y_log10()
+
+# write out data
+write.table(indata.genes.genera.long.aggr.carb, file = "indata.genes.genera.long.aggr.carb.tsv", sep = "\t", row.names = FALSE)
+```
+
+Electron transfer
+
+```{r}
+indata.genes.genera.long.aggr.etransf <- subset(indata.genes.genera.long.aggr, operon %in% c("SDH", "GLP", "NUO"))
+
+indata.genes.genera.long.aggr.etransf <- aggregate(abundance~operon+Genus+sample, data = indata.genes.genera.long.aggr.etransf, sum)
+
+# fill missing combinations operon-Genus-sample
+indata.genes.genera.long.aggr.etransf <- indata.genes.genera.long.aggr.etransf %>% complete(operon, Genus, sample, fill = list(abundance = 0))
+
+# add rows with total counts
+indata.genes.genera.long.aggr.etransf.total <- indata.genes.genera.long.aggr.etransf %>% group_by(operon, sample) %>% summarise(abundance=sum(abundance))
+indata.genes.genera.long.aggr.etransf.total$Genus <- "Total"
+indata.genes.genera.long.aggr.etransf <- bind_rows(indata.genes.genera.long.aggr.etransf, indata.genes.genera.long.aggr.etransf.total)
+
+# generate palette from http://tools.medialab.sciences-po.fr/iwanthue/index.php
+# then switch the one before last one to black for the total
+c2use <- c(c2use <- c("#d05321",
+"#3ce890",
+"#aa2e9c",
+"#438400",
+"#004daf",
+"#dfb42a",
+"#1f1a62",
+"#00e2af",
+"#90006d",
+"#c9dc8c",
+"#ff8de0",
+"#00632b",
+"#b2a3ff",
+"#5e6a00",
+"#000000",
+"#ff88b1",
+"#6d002e"))
+
+ggplot(data = indata.genes.genera.long.aggr.etransf, aes(x=factor(sample), y=abundance+1, fill=Genus)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values=c2use) +
+  #stat_summary(fun.y = "sum", color = "black", geom = "bar", position = "dodge") +
+  facet_grid(operon ~ sample, scales = "free_x") +
+  scale_y_log10()
+
+# write out data
+write.table(indata.genes.genera.long.aggr.etransf, file = "indata.genes.genera.long.aggr.etransf.tsv", sep = "\t", row.names = FALSE)
+```
+
+Pyruvate fermentation/fermentation
+
+```{r}
+indata.genes.genera.long.aggr.pyferm <- subset(indata.genes.genera.long.aggr, operon %in% c("PDH", "MDH"))
+
+indata.genes.genera.long.aggr.pyferm <- aggregate(abundance~operon+Genus+sample, data = indata.genes.genera.long.aggr.pyferm, sum)
+
+# fill missing combinations operon-Genus-sample
+indata.genes.genera.long.aggr.pyferm <- indata.genes.genera.long.aggr.pyferm %>% complete(operon, Genus, sample, fill = list(abundance = 0))
+
+# add rows with total counts
+indata.genes.genera.long.aggr.pyferm.total <- indata.genes.genera.long.aggr.pyferm %>% group_by(operon, sample) %>% summarise(abundance=sum(abundance))
+indata.genes.genera.long.aggr.pyferm.total$Genus <- "Total"
+indata.genes.genera.long.aggr.pyferm <- bind_rows(indata.genes.genera.long.aggr.pyferm, indata.genes.genera.long.aggr.pyferm.total)
+
+# generate palette from http://tools.medialab.sciences-po.fr/iwanthue/index.php
+# then switch the one before last one to black for the total
+c2use <- c(c2use <- c("#5e6a00",
+"#ff88b1",
+"#000000"))
+
+ggplot(data = indata.genes.genera.long.aggr.pyferm, aes(x=factor(sample), y=abundance+1, fill=Genus)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values=c2use) +
+  #stat_summary(fun.y = "sum", color = "black", geom = "bar", position = "dodge") +
+  facet_grid(operon ~ sample, scales = "free_x") +
+  scale_y_log10()
+
+# write out data
+write.table(indata.genes.genera.long.aggr.pyferm, file = "indata.genes.genera.long.aggr.pyferm.tsv", sep = "\t", row.names = FALSE)
+```
