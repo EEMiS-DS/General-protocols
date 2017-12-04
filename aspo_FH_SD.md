@@ -530,3 +530,58 @@ cp ${infile}.raxmlEPA.tar.gz ${raxmlEPAChunkFolder}
 EOF
 done
 ```
+
+**Update Dec 4th, 2017**
+
+RAxML runs for bacteria fail due to time limit. We'll try two workarounds:
+
+- Run RAxML with the same files, but increasing the number of threads;
+- Reduce the size of chunks of files.
+
+**Run RAxML with the same files, but increasing the number of threads**
+
+```bash
+mkdir -p ${raxmlEPAChunkFolder}
+
+for domain in bac; do
+    export domain=${domain}
+    if [[ ${domain} == "arc" ]]
+    then
+        export RT=${arcSSU_RT}
+    else
+        export RT=${bacSSU_RT}
+    fi
+sbatch -p node -t 20:00:00 -A b2016308 \
+--array=1-$(wc -l < sortmerna_out_chunks.${domain}.list) \
+-J raxmlEPA_${domain}__node_%a \
+-o ${raxmlEPAChunkFolder}/raxmlEPA_${domain}_node_%a.out \
+-e ${raxmlEPAChunkFolder}/raxmlEPA_${domain}_node_%a.err<<'EOF'
+#!/bin/bash
+
+module load bioinfo-tools
+module load raxml
+
+infile=$(sed -n "$SLURM_ARRAY_TASK_ID"p sortmerna_out_chunks.${domain}.list)
+
+export paparaOutfile="${paparaOutFolder}/${infile}.papara.tar.gz"
+export alignFile="papara_alignment.${infile}"
+
+# extract papara output to SNIC_TMP
+tar -xvzf ${paparaOutfile} -C ${SNIC_TMP} ${alignFile}
+cp ${RT} ${SNIC_TMP}
+
+cd ${SNIC_TMP}
+raxmlHPC-PTHREADS-AVX -f v \
+-s ${alignFile} \
+-G 0.1 \
+-t ${RT} \
+-m GTRCAT \
+-n ${alignFile} \
+-T 16
+
+tar -cvzf ${infile}.raxmlEPA.tar.gz RAxML_*
+
+cp ${infile}.raxmlEPA.tar.gz ${raxmlEPAChunkFolder}
+EOF
+done
+```
