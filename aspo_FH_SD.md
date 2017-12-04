@@ -531,7 +531,7 @@ EOF
 done
 ```
 
-**Update Dec 4th, 2017**
+## Update Dec 4th, 2017
 
 RAxML runs for bacteria fail due to time limit. We'll try two workarounds:
 
@@ -541,7 +541,7 @@ RAxML runs for bacteria fail due to time limit. We'll try two workarounds:
 **Run RAxML with the same files, but increasing the number of threads**
 
 ```bash
-mkdir -p ${raxmlEPAChunkFolder}
+mkdir -p ${raxmlEPAChunkFolder}_node
 
 for domain in bac; do
     export domain=${domain}
@@ -554,8 +554,8 @@ for domain in bac; do
 sbatch -p node -t 20:00:00 -A b2016308 \
 --array=1-$(wc -l < sortmerna_out_chunks.${domain}.list) \
 -J raxmlEPA_${domain}__node_%a \
--o ${raxmlEPAChunkFolder}/raxmlEPA_${domain}_node_%a.out \
--e ${raxmlEPAChunkFolder}/raxmlEPA_${domain}_node_%a.err<<'EOF'
+-o ${raxmlEPAChunkFolder}_node/raxmlEPA_${domain}_node_%a.out \
+-e ${raxmlEPAChunkFolder}_node/raxmlEPA_${domain}_node_%a.err<<'EOF'
 #!/bin/bash
 
 module load bioinfo-tools
@@ -581,7 +581,65 @@ raxmlHPC-PTHREADS-AVX -f v \
 
 tar -cvzf ${infile}.raxmlEPA.tar.gz RAxML_*
 
-cp ${infile}.raxmlEPA.tar.gz ${raxmlEPAChunkFolder}
+cp ${infile}.raxmlEPA.tar.gz ${raxmlEPAChunkFolder}_node
 EOF
+done
+```
+
+**Reduce the size of chunks of files**
+
+Set new working dirs
+
+```bash
+export wd="/pica/v9/b2016308_nobackup/projects/aspo_FH_SD"
+export ordir="/pica/v8/b2013127_nobackup/projects/domeni/aspo"
+
+# folder with shared tools, scripts etc.
+export PATH=/proj/b2016308/glob:$PATH
+
+# sample sin this case are datasets from single lanes (one BioReplicate can have more than one)
+export samples=$(cat $wd/TechReplicates)
+
+# reference alignment in phylip format
+export arcSSU_RA="/proj/b2016308/glob/TOS_all.l600.ark.clean.95Gaps.afa.reduced"
+export bacSSU_RA="/proj/b2016308/glob/TOS_all.l600.bac.clean.95Gaps.afa.reduced"
+# reference tree in newick format
+export arcSSU_RT="/proj/b2016308/glob/RAxML_bipartitionsBranchLabels.TOS_all.l600.ark.clean.95Gaps.reduced_n4"
+export bacSSU_RT="/proj/b2016308/glob/RAxML_bipartitionsBranchLabels.TOS_all.l600.bac.clean.95Gaps.reduced_n4"
+
+# output folders
+export sortmernaChunkFolder=${wd}/sortmerna_out_chunks_100K
+export paparaOutFolder=${wd}/papara_out_chunks_100K
+export raxmlEPAChunkFolder=${wd}/raxmlEPA_out_chunks_100K
+
+mkdir -p ${sortmernaChunkFolder}
+mkdir -p ${paparaOutFolder}
+mkdir -p ${raxmlEPAChunkFolder}
+```
+
+- Process sam output with script `processSortMeRNAsam.chunks.py` to get:
+    - R1 file
+    - R2 file
+    - orphan read file
+
+```bash
+cd ${wd}
+mkdir -p ${sortmernaChunkFolder}
+for sample in ${samples}; do
+    export sample=${sample}
+    for domain in arc bac euk; do
+        export domain=${domain}
+sbatch -p core -t 1:00:00 -A b2013127 \
+-J sortProc.${sample}.${domain}.chunks \
+-o ${sortmernaChunkFolder}/sortProc.${sample}.${domain}.chunks.out \
+-e ${sortmernaChunkFolder}/sortProc.${sample}.${domain}.chunks.err<<'EOF'
+#!/bin/bash
+
+processSortMeRNAsam.chunks.opts.py \
+--infile=sortmerna/${sample}_sortmerna_aligned_${domain}SSU.allreads.PE.sam \
+--outdir=${sortmernaChunkFolder} \
+--chunk_size=100000
+EOF
+done
 done
 ```
