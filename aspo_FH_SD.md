@@ -1,7 +1,6 @@
 # Phylogenetic placement
 
 **TODO**:
-- Euk SSU tree
 - papara+raxml on Euk tree
 
 ### Setup working environment
@@ -641,5 +640,65 @@ processSortMeRNAsam.chunks.opts.py \
 --chunk_size=100000
 EOF
 done
+done
+```
+
+#### PaPaRa
+
+```
+mkdir -p ${paparaOutFolder}
+
+for domain in arc bac; do
+#for domain in bac; do
+    export domain=${domain}
+    if [[ ${domain} == "arc" ]]
+    then
+        export RT=${arcSSU_RT}
+        export RA=${arcSSU_RA}
+        ls ${sortmernaChunkFolder}/*${domain}SSU*.fa | awk 'BEGIN{FS="/"}{print $NF}' > sortmerna_out_chunks.100K.${domain}.list
+    else
+        export RT=${bacSSU_RT}
+        export RA=${bacSSU_RA}
+        ls ${sortmernaChunkFolder}/*${domain}SSU*.fa | awk 'BEGIN{FS="/"}{print $NF}' > sortmerna_out_chunks.100K.${domain}.list
+    fi
+sbatch -t 10:00:00 -p node -A b2016308 \
+--array=1-$(wc -l < sortmerna_out_chunks.100K.${domain}.list) \
+-J papara_${domain}_%a \
+-o ${paparaOutFolder}/papara_${domain}_%a.out \
+-e ${paparaOutFolder}/papara_${domain}_%a.err \
+--mail-type=ALL --mail-user=domenico.simone@lnu.se<<'BWE'
+#!/bin/bash
+
+# test
+# infile="P1607_145_sortmerna_aligned_bacSSU.allreads.orphans.1.fa"
+infile=$(sed -n "$SLURM_ARRAY_TASK_ID"p sortmerna_out_chunks.100K.${domain}.list)
+
+export PATH=/proj/b2016308/glob/:$PATH
+##for testing
+#export sample=P1607_145
+#export i=R1
+
+cp ${RT} ${SNIC_TMP}
+cp ${RA} ${SNIC_TMP}
+cp ${sortmernaChunkFolder}/${infile} ${SNIC_TMP}
+cd ${SNIC_TMP}
+
+echo "temp folder:"
+ls *
+
+time papara \
+-j 16 \
+-t $(basename ${RT}) \
+-s $(basename ${RA}) \
+-q ${infile} \
+-n ${infile}
+
+tar -cvzf \
+${infile}.papara.tar.gz *
+
+cp \
+${infile}.papara.tar.gz \
+${paparaOutFolder}
+BWE
 done
 ```
