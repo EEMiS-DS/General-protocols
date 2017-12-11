@@ -702,3 +702,52 @@ ${paparaOutFolder}
 BWE
 done
 ```
+
+#### RAxML-EPA
+
+```bash
+mkdir -p ${raxmlEPAChunkFolder}
+
+for domain in arc bac; do
+    export domain=${domain}
+    if [[ ${domain} == "arc" ]]
+    then
+        export RT=${arcSSU_RT}
+    else
+        export RT=${bacSSU_RT}
+    fi
+#salloc -p devcore -n 8 -t 1:00:00 -A b2013127
+sbatch -p core -n 4 -t 20:00:00 -A b2016308 \
+--array=1-$(wc -l < sortmerna_out_chunks.${domain}.list) \
+-J raxmlEPA_${domain}_%a \
+-o ${raxmlEPAChunkFolder}/raxmlEPA_${domain}_%a.out \
+-e ${raxmlEPAChunkFolder}/raxmlEPA_${domain}_%a.err<<'EOF'
+#!/bin/bash
+
+module load bioinfo-tools
+module load raxml
+
+infile=$(sed -n "$SLURM_ARRAY_TASK_ID"p sortmerna_out_chunks.${domain}.list)
+
+export paparaOutfile="${paparaOutFolder}/${infile}.papara.tar.gz"
+export alignFile="papara_alignment.${infile}"
+
+# extract papara output to SNIC_TMP
+tar -xvzf ${paparaOutfile} -C ${SNIC_TMP} ${alignFile}
+cp ${RT} ${SNIC_TMP}
+
+cd ${SNIC_TMP}
+raxmlHPC-PTHREADS-AVX -f v \
+-s ${alignFile} \
+-G 0.1 \
+-t ${RT} \
+-m GTRCAT \
+-n ${alignFile} \
+-T 4
+
+tar -cvzf ${infile}.raxmlEPA.tar.gz RAxML_*
+
+cp ${infile}.raxmlEPA.tar.gz ${raxmlEPAChunkFolder}
+EOF
+done
+```
