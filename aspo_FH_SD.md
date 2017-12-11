@@ -1,3 +1,18 @@
+<!-- TOC START min:1 max:4 link:true update:true -->
+- [Phylogenetic placement](#phylogenetic-placement)
+    - [Setup working environment](#setup-working-environment)
+    - [SortMeRNA](#sortmerna)
+      - [Get unaligned reads to assemble mRNA](#get-unaligned-reads-to-assemble-mrna)
+      - [Get read datasets for each domain/SSU (get aligned reads)](#get-read-datasets-for-each-domainssu-get-aligned-reads)
+      - [PaPaRa](#papara)
+      - [RAxML-EPA](#raxml-epa)
+  - [Update Dec 4th, 2017](#update-dec-4th-2017)
+      - [Reduce the size of chunks of files](#reduce-the-size-of-chunks-of-files)
+      - [PaPaRa](#papara-1)
+      - [RAxML-EPA](#raxml-epa-1)
+
+<!-- TOC END -->
+
 # Phylogenetic placement
 
 **TODO**:
@@ -585,7 +600,7 @@ EOF
 done
 ```
 
-**Reduce the size of chunks of files**
+#### Reduce the size of chunks of files
 
 Set new working dirs
 
@@ -645,7 +660,7 @@ done
 
 #### PaPaRa
 
-```
+```bash
 mkdir -p ${paparaOutFolder}
 
 for domain in arc bac; do
