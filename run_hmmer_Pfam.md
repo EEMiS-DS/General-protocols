@@ -38,3 +38,37 @@ ${inputFile}
 EOF
 ```
 
+## Test execution time on 100 sequences
+
+```bash
+mkdir test_hmmer
+head -n200 THAWP/sprot.faa > test_hmmer/test.faa
+cd test_hmmer
+
+sbatch -A snic2018-3-22 -p node -t 20:00:00 \
+-J hmmsearch_test -o hmmsearch_test.out -e hmmsearch_test.err \
+--mail-type=ALL --mail-user=domenico.simone@slu.se<<'EOF'
+#!/bin/bash
+
+module load bioinfo-tools
+module load hmmer
+
+time hmmsearch \
+--tblout test.tblout \
+-E 1e-5 \
+--cpu 20 \
+/home/domeni/thaw_ponds/pfam_db_2018/Pfam-A.hmm \
+test.faa
+EOF
+```
+
+## Split sequences and run hmmsearch
+
+```bash
+hmmsearch \
+--tblout <output file> \
+-E 1e-5 \
+--cpu 20 \
+~/Pfam/Pfam-mobility.hmm \
+<input file (protein format)> > /dev/null
+```
