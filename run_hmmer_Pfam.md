@@ -59,6 +59,7 @@ prodigal -i thawponds_assembly.fa \
 -a prodigal/thawponds_assembly.cds.faa \
 -d prodigal/thawponds_assembly.cds.ffn \
 -o prodigal/thawponds_assembly.cds.out \
+-f gff \
 -p meta \
 -m
 
