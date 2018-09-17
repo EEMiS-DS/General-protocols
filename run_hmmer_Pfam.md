@@ -95,15 +95,35 @@ Time for 100 sequences: 1'. We can split the dataset (n=2638865) in chunks of 60
 ## Split sequences and run hmmsearch
 
 ```bash
-splitSeqFile.py <infile> \
+splitSeqFile.py prodigal/thawponds_assembly.cds.faa \
 fasta \
 fasta \
 60000
 
+ls prodigal/thawponds_assembly.cds.*faa > prodigal/thawponds_assembly.cds.faa.files
+
+sbatch -A snic2018-3-22 -p node -t 20:00:00 \
+-J prokka -o logs/prokka_thawponds.out -e logs/prokka_thawponds.err \
+--array=1-$(wc -l < prodigal/thawponds_assembly.cds.faa.files) \
+--mail-type=ALL --mail-user=domenico.simone@slu.se<<'EOF'
+#!/bin/bash
+
+module load bioinfo-tools
+module load hmmer
+
+inputFile=$(sed -n "$SLURM_ARRAY_TASK_ID"p prodigal/thawponds_assembly.cds.faa.files)
+basenameFile=$(basename $inputFile)
+cp $inputFile ${SNIC_TMP}
+cp /home/domeni/thaw_ponds/pfam_db_2018/Pfam-A.hmm ${SNIC_TMP}
+
+cd ${SNIC_TMP}
+
 hmmsearch \
---tblout <output file> \
+--tblout ${basenameFile/.faa/.hmmer_pfam.tblout} \
 -E 1e-5 \
 --cpu 20 \
-~/Pfam/Pfam-mobility.hmm \
-<input file (protein format)> > /dev/null
+Pfam-A.hmm \
+${basenameFile}
+
+EOF
 ```
