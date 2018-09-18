@@ -100,7 +100,7 @@ export wdir=`pwd`
 splitSeqFile.py prodigal/thawponds_assembly.cds.faa \
 fasta \
 fasta \
-60000
+30000
 
 ls prodigal/thawponds_assembly.cds.*faa > prodigal/thawponds_assembly.cds.faa.files
 
@@ -129,50 +129,6 @@ Pfam-A.hmm \
 ${basenameFile}
 
 cp $outFile $wdir
-
-EOF
-```
-
-## Alternate version to be run overnight
-
-```bash
-# calculate number of needed arrays
-export na=
-
-sbatch -A snic2018-3-22 -p node -t 20:00:00 \
--J hmmer -o logs/hmmer_thawponds_alt_%a.out -e logs/hmmer_thawponds_alt_%a.err \
---array=1-$(wc -l < prodigal/thawponds_assembly.cds.faa.files) \
---mail-type=ALL --mail-user=domenico.simone@slu.se<<'EOF'
-#!/bin/bash
-
-module load bioinfo-tools
-module load hmmer
-
-splitSeqFile.py prodigal/thawponds_assembly.cds.faa \
-fasta \
-fasta \
-60000
-
-ls prodigal/thawponds_assembly.cds.*faa > prodigal/thawponds_assembly.cds.faa.files
-
-
-
-inputFile=$(sed -n "$SLURM_ARRAY_TASK_ID"p prodigal/thawponds_assembly.cds.faa.files)
-basenameFile=$(basename $inputFile)
-outFile=${basenameFile/.faa/.hmmer_pfam.tblout}
-cp $inputFile ${SNIC_TMP}
-cp /home/domeni/thaw_ponds/pfam_db_2018/Pfam-A.hmm ${SNIC_TMP}
-
-cd ${SNIC_TMP}
-
-hmmsearch \
---tblout $outFile \
--E 1e-5 \
---cpu 20 \
-Pfam-A.hmm \
-${basenameFile}
-
-cp $outFile
 
 EOF
 ```
