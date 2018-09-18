@@ -73,7 +73,7 @@ Use `htseq-count` to perform two different read counts:
 - one considering **all** (also **non-unique**) read placements. These should be input for things like **descriptive plots**;
 - one considerin **only** unique read placements. These should be input for downstream analysis such as **differential gene expression** (.
 
-### htseq-count for all counts
+### Test htseq-count for all counts
 
 ```bash
 # test on smallest align file
@@ -82,22 +82,23 @@ Use `htseq-count` to perform two different read counts:
 # salloc -p devcore -t 1:00:00 -A snic2018-3-22
 
 module load bioinfo-tools
+
 module load htseq
 
-htseq-count \
+time htseq-count \
 -f bam \
--r pos \
+-r name \
 -s no \
 -t CDS \
 -i ID \
 -m union \
+-o D-1_S32_L006.counts.all.sam \
 --nonunique all \
 D-1_S32_L006.sorted.bam \
-prodigal/thawponds_assembly.cds.out
-
+prodigal/thawponds_assembly.cds.out > counts/D-1_S32_L006.counts.all.out
 ```
 
-### htseq-count for unique counts
+### Test htseq-count for unique counts
 
 ```bash
 # test on smallest align file
@@ -119,6 +120,63 @@ htseq-count \
 D-1_S32_L006.sorted.bam \
 prodigal/thawponds_assembly.cds.out
 
+```
+
+### Run samtools sort + htseq-count (nonunique) + htseq-count (all)
+
+With htseq-count, the best is to have bam sorted by read name. So we'll sort them by name and run htseq
+
+```bash
+export wdir=`pwd`
+
+mkdir -p alignments
+ls *.sorted.bam | sed 's/.sorted.bam//g' > sampleList
+
+sbatch -A snic2018-3-22 -p core -t 20:00:00 \
+-J ssort_htseq_thawponds -o logs/ssort_htseq_thawponds_%a.out -e logs/ssort_htseq_thawponds_thawponds_%a.err \
+--array=1-$(wc -l < sampleList) \
+--mail-type=ALL --mail-user=domenico.simone@slu.se<<'EOF'
+#!/bin/bash
+
+module load bioinfo-tools
+module load pysam/0.13-python2.7.11
+module load htseq
+module load samtools
+
+sample=$(sed -n "$SLURM_ARRAY_TASK_ID"p sampleList)
+
+cp prodigal/thawponds_assembly.cds.out ${SNIC_TMP}
+cp ${sample}.sorted.bam ${SNIC_TMP} && cd ${SNIC_TMP}
+
+samtools sort -o ${sample}.sorted.name.bam ${sample}.sorted.bam
+
+cp ${sample}.sorted.name.bam ${wdir}/alignments
+
+time htseq-count \
+-f bam \
+-r name \
+-s no \
+-t CDS \
+-i ID \
+-m union \
+--nonunique all \
+${sample}.sorted.name.bam \
+thawponds_assembly.cds.out > ${sample}.counts.all.out
+
+time htseq-count \
+-f bam \
+-r name \
+-s no \
+-t CDS \
+-i ID \
+-m union \
+--nonunique none \
+${sample}.sorted.name.bam \
+thawponds_assembly.cds.out > ${sample}.counts.unique.out
+
+cp *counts*out ${wdir}/counts
+
+EOF
 ```
 
 ## Test hmmer execution time on 100 sequences
