@@ -68,11 +68,58 @@ EOF
 
 ## Perform read count for each predicted cds
 
-Use `htseq-count` to perform two different counts:
+Use `htseq-count` to perform two different read counts:
 
-- 
+- one considering **all** (also **non-unique**) read placements. These should be input for things like **descriptive plots**;
+- one considerin **only** unique read placements. These should be input for downstream analysis such as **differential gene expression** (.
+
+### htseq-count for all counts
 
 ```bash
+# test on smallest align file
+#D-1_S32_L006.sorted.bam
+
+# salloc -p devcore -t 1:00:00 -A snic2018-3-22
+
+module load bioinfo-tools
+module load htseq
+
+htseq-count \
+-f bam \
+-r pos \
+-s no \
+-t CDS \
+-i ID \
+-m union \
+--nonunique all \
+D-1_S32_L006.sorted.bam \
+prodigal/thawponds_assembly.cds.out
+
+```
+
+### htseq-count for unique counts
+
+```bash
+# test on smallest align file
+#D-1_S32_L006.sorted.bam
+
+# salloc -p devcore -t 1:00:00 -A snic2018-3-22
+
+module load bioinfo-tools
+module load htseq
+
+htseq-count \
+-f bam \
+-r pos \
+-s no \
+-t CDS \
+-i ID \
+-m union \
+--nonunique none \
+D-1_S32_L006.sorted.bam \
+prodigal/thawponds_assembly.cds.out
+
+```
 
 ## Test hmmer execution time on 100 sequences
 
