@@ -90,7 +90,7 @@ test.faa
 EOF
 ```
 
-Time for 100 sequences: 1'. We can split the dataset (n=2638865) in chunks of 60,000 sequences which should take 10 hours each.
+Time for 100 sequences: 1'. We can split the dataset (n=2638865) in chunks of 30,000 sequences which should take ~5 hours each.
 
 ## Split sequences and run hmmsearch
 
@@ -129,6 +129,41 @@ Pfam-A.hmm \
 ${basenameFile}
 
 cp $outFile $wdir
+
+EOF
+```
+
+Indeed 30000 sequences take less than 20' :-) How long does it take for the entire dataset (n=2638865) to run?
+
+```bash
+cd /home/domeni/thaw_ponds_contig_mappings/new_contig_mappings
+mkdir -p hmmer
+export wdir=`pwd`
+
+sbatch -A snic2018-3-22 -p node -t 50:00:00 \
+-J hmmer_all -o logs/hmmer_thawponds_all.out -e logs/hmmer_thawponds_all.err \
+--mail-type=ALL --mail-user=domenico.simone@slu.se<<'EOF'
+#!/bin/bash
+
+module load bioinfo-tools
+module load hmmer
+
+inputFile=prodigal/thawponds_assembly.cds.faa
+basenameFile=$(basename $inputFile)
+outFile=${basenameFile/.faa/.all.hmmer_pfam.tblout}
+cp $inputFile ${SNIC_TMP}
+cp /home/domeni/thaw_ponds/pfam_db_2018/Pfam-A.hmm ${SNIC_TMP}
+
+cd ${SNIC_TMP}
+
+hmmsearch \
+--tblout $outFile \
+-E 1e-5 \
+--cpu 20 \
+Pfam-A.hmm \
+${basenameFile}
+
+cp $outFile $wdir/hmmer
 
 EOF
 ```
