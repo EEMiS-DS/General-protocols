@@ -66,7 +66,15 @@ prodigal -i thawponds_assembly.fa \
 EOF
 ```
 
-## Test execution time on 100 sequences
+## Perform read count for each predicted cds
+
+Use `htseq-count` to perform two different counts:
+
+- 
+
+```bash
+
+## Test hmmer execution time on 100 sequences
 
 ```bash
 mkdir test_hmmer
