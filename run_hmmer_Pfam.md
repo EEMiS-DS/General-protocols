@@ -129,8 +129,8 @@ With htseq-count, the best is to have bam sorted by read name. So we'll sort the
 ```bash
 export wdir=`pwd`
 
-mkdir -p alignments
-ls *.sorted.bam | sed 's/.sorted.bam//g' > sampleList
+#mkdir -p alignments
+ls alignments/*.sorted.bam | sed 's/.sorted.bam//g' | awk 'BEGIN{FS="/"}{print $2}' > sampleList
 
 sbatch -A snic2018-3-22 -p core -t 20:00:00 \
 -J ssort_htseq_thawponds -o logs/ssort_htseq_thawponds_%a.out -e logs/ssort_htseq_thawponds_thawponds_%a.err \
@@ -146,7 +146,7 @@ module load samtools
 sample=$(sed -n "$SLURM_ARRAY_TASK_ID"p sampleList)
 
 cp prodigal/thawponds_assembly.cds.out ${SNIC_TMP}
-cp ${sample}.sorted.bam ${SNIC_TMP} && cd ${SNIC_TMP}
+cp alignments/${sample}.sorted.bam ${SNIC_TMP} && cd ${SNIC_TMP}
 
 samtools sort -o ${sample}.sorted.name.bam ${sample}.sorted.bam
 
