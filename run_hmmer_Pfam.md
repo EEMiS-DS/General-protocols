@@ -246,11 +246,19 @@ cp $outFile $wdir
 EOF
 ```
 
-Then concatenate all results, filtering out comment lines and compressing the output
+Then concatenate results to be exported:
+- hmmer results, filtering out comment lines and compressing the output;
+- read counts with ambiguous reads filtered out (for differential abundance analysis);
+- read counts with all reads (for descriptive plots).
 
 ```bash
+# hmmer results
 cd hmmer
 grep -hv "^#" thawponds_assembly.cds.*.hmmer_pfam.tblout | gzip - > thawponds_assembly.cds.all.hmmer_pfam.tblout.gz
+cd ..
+
+# read counts with ambiguous reads filtered out
+
 ```
 
 ## Test hmmer on single file
