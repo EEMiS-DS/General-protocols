@@ -246,6 +246,15 @@ cp $outFile $wdir
 EOF
 ```
 
+Then concatenate all results, filtering out comment lines and compressing the output
+
+```bash
+cd hmmer
+grep -hv "^#" thawponds_assembly.cds.*.hmmer_pfam.tblout | gzip - > thawponds_assembly.cds.all.hmmer_pfam.tblout.gz
+```
+
+## Test hmmer on single file
+
 Indeed 30000 sequences take less than 20' :-) How long does it take for the entire dataset (n=2638865) to run?
 
 ```bash
