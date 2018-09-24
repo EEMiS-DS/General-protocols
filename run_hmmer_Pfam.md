@@ -179,6 +179,28 @@ cp *counts*out ${wdir}/counts
 EOF
 ```
 
+Then concatenate count files, adding to each row the sample name and compressing the resulting file
+
+```bash
+catFile=all_samples.counts.all.out
+rm -f $catFile
+for i in $(ls *.all.out); do
+    sampleName=$(echo $i | cut -f1 -d_)
+    echo $sampleName
+    awk -v sampleName="$sampleName" 'BEGIN{OFS="\t"}{print sampleName, $0}' $i >> $catFile 
+done
+gzip $catFile
+
+catFile=all_samples.counts.unique.out
+rm -f $catFile
+for i in $(ls *.unique.out); do
+    sampleName=$(echo $i | cut -f1 -d_)
+    echo $sampleName
+    awk -v sampleName="$sampleName" 'BEGIN{OFS="\t"}{print sampleName, $0}' $i >> $catFile 
+done
+gzip $catFile
+```
+
 ## Test hmmer execution time on 100 sequences
 
 ```bash
