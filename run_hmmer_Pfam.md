@@ -297,3 +297,5 @@ cp $outFile $wdir/hmmer
 
 EOF
 ```
+
+Execution time: ~28h.
