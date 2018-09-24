@@ -227,7 +227,7 @@ EOF
 
 Time for 100 sequences: 1'. We can split the dataset (n=2638865) in chunks of 30,000 sequences which should take ~5 hours each.
 
-## Split sequences and run hmmsearch
+## Split sequences (chunk size = 30000) and run hmmsearch
 
 ```bash
 export wdir=`pwd`
@@ -237,7 +237,12 @@ fasta \
 fasta \
 30000
 
-ls prodigal/thawponds_assembly.cds.*faa > prodigal/thawponds_assembly.cds.faa.files
+mkdir -p prodigal/split30000
+mv prodigal/thawponds_assembly.cds.split30000.*.faa prodigal/split30000
+ls prodigal/split30000/thawponds_assembly.cds.split30000.*.faa > prodigal/split30000/thawponds_assembly.cds.faa.files
+
+export outDir=${wdir}/hmmer/split30000
+mkdir -p ${outDir}
 
 sbatch -A snic2018-3-22 -p node -t 20:00:00 \
 -J hmmer -o logs/hmmer_thawponds_%a.out -e logs/hmmer_thawponds_%a.err \
@@ -263,7 +268,7 @@ hmmsearch \
 Pfam-A.hmm \
 ${basenameFile}
 
-cp $outFile $wdir
+cp $outFile $outDir
 
 EOF
 ```
@@ -321,3 +326,51 @@ EOF
 ```
 
 Execution time: ~28h.
+
+## Split sequences (chunk size = 50000) and run hmmsearch
+
+What we need is the hmmer output got from the option `--domtblout`. But we will re-run hmmer on chunks of 500000 sequences.
+
+```bash
+export wdir=`pwd`
+
+splitSeqFile.py prodigal/thawponds_assembly.cds.faa \
+fasta \
+fasta \
+500000
+
+mkdir -p prodigal/split500000
+mv prodigal/thawponds_assembly.cds.split500000.*.faa prodigal/split500000
+ls prodigal/split500000/thawponds_assembly.cds.split500000.*.faa > prodigal/split500000/thawponds_assembly.cds.faa.files
+
+export outDir=${wdir}/hmmer/split500000
+mkdir -p ${outDir}
+
+sbatch -A snic2018-3-22 -p node -t 20:00:00 \
+-J hmmer -o logs/hmmer_thawponds_split500000_%a.out -e logs/hmmer_thawponds_split500000_%a.err \
+--array=1-$(wc -l < prodigal/split500000/thawponds_assembly.cds.faa.files) \
+--mail-type=ALL --mail-user=domenico.simone@slu.se<<'EOF'
+#!/bin/bash
+
+module load bioinfo-tools
+module load hmmer
+
+inputFile=$(sed -n "$SLURM_ARRAY_TASK_ID"p prodigal/split500000/thawponds_assembly.cds.faa.files)
+basenameFile=$(basename $inputFile)
+outFile=${basenameFile/.faa/.hmmer_pfam.tblout}
+cp $inputFile ${SNIC_TMP}
+cp /home/domeni/thaw_ponds/pfam_db_2018/Pfam-A.hmm ${SNIC_TMP}
+
+cd ${SNIC_TMP}
+
+hmmsearch \
+--tblout $outFile \
+-E 1e-5 \
+--cpu 20 \
+Pfam-A.hmm \
+${basenameFile}
+
+cp $outFile $outDir
+
+EOF
+```
