@@ -391,3 +391,55 @@ Concatenate results and rsync to local machine.
 ```{bash}
 cat hmmer/split500000/thawponds_assembly.cds.split500000.0000*domtblout > hmmer/split500000/thawponds_assembly.cds.split500000.all.hmmer_pfam.domtblout
 ```
+
+### Run htseq-count (nonunique) + htseq-count (all)
+
+```bash
+export wdir=`pwd`
+
+sbatch -A snic2018-3-22 -p core -t 6:00:00 \
+-J ssort_htseq_thawponds_pfam -o logs/ssort_htseq_thawponds_pfam_%a.out -e logs/ssort_htseq_thawponds_pfam_%a.err \
+--array=1-$(wc -l < sampleList) \
+--mail-type=ALL --mail-user=domenico.simone@slu.se<<'EOF'
+#!/bin/bash
+
+module load bioinfo-tools
+module load pysam/0.13-python2.7.11
+module load htseq
+module load samtools
+
+sample=$(sed -n "$SLURM_ARRAY_TASK_ID"p sampleList)
+
+cp prodigal/thawponds_assembly.cds.hmmer_pfam.gff ${SNIC_TMP}
+cp alignments/${sample}.sorted.name.bam ${SNIC_TMP} && cd ${SNIC_TMP}
+
+#samtools sort -o ${sample}.sorted.name.bam ${sample}.sorted.bam
+
+#cp ${sample}.sorted.name.bam ${wdir}/alignments
+
+time htseq-count \
+-f bam \
+-r name \
+-s no \
+-t Domain \
+-i PFAM_ID \
+-m union \
+--nonunique all \
+${sample}.sorted.name.bam \
+thawponds_assembly.cds.hmmer_pfam.gff.out > ${sample}.pfam.counts.all.out
+
+time htseq-count \
+-f bam \
+-r name \
+-s no \
+-t Domain \
+-i PFAM_ID \
+-m union \
+--nonunique none \
+${sample}.sorted.name.bam \
+thawponds_assembly.cds.hmmer_pfam.gff.out > ${sample}.pfam.counts.unique.out
+
+cp *counts*out ${wdir}/counts
+
+EOF
+```
