@@ -327,7 +327,7 @@ EOF
 
 Execution time: ~28h.
 
-## Split sequences (chunk size = 50000) and run hmmsearch
+## Split sequences (chunk size = 500000) and run hmmsearch
 
 What we need is the hmmer output got from the option `--domtblout`. But we will re-run hmmer on chunks of 500000 sequences.
 
@@ -382,4 +382,12 @@ cp $domOutFile $outDir
 cp $tblOutFile $outDir
 
 EOF
+```
+
+Running time = ~3h30'.
+
+Concatenate results and rsync to local machine.
+
+```{bash}
+cat hmmer/split500000/thawponds_assembly.cds.split500000.0000*domtblout > hmmer/split500000/thawponds_assembly.cds.split500000.all.hmmer_pfam.domtblout
 ```
