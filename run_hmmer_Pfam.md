@@ -396,6 +396,7 @@ cat hmmer/split500000/thawponds_assembly.cds.split500000.0000*domtblout > hmmer/
 
 ```bash
 export wdir=`pwd`
+export gffFile="thawponds_assembly.cds.hmmer_pfam.gff"
 
 sbatch -A snic2018-3-22 -p core -t 6:00:00 \
 -J ssort_htseq_thawponds_pfam -o logs/ssort_htseq_thawponds_pfam_%a.out -e logs/ssort_htseq_thawponds_pfam_%a.err \
@@ -410,7 +411,7 @@ module load samtools
 
 sample=$(sed -n "$SLURM_ARRAY_TASK_ID"p sampleList)
 
-cp prodigal/thawponds_assembly.cds.hmmer_pfam.gff ${SNIC_TMP}
+cp prodigal/${gffFile} ${SNIC_TMP}
 cp alignments/${sample}.sorted.name.bam ${SNIC_TMP} && cd ${SNIC_TMP}
 
 #samtools sort -o ${sample}.sorted.name.bam ${sample}.sorted.bam
@@ -426,7 +427,7 @@ time htseq-count \
 -m union \
 --nonunique all \
 ${sample}.sorted.name.bam \
-thawponds_assembly.cds.hmmer_pfam.gff.out > ${sample}.pfam.counts.all.out
+${gffFile} > ${sample}.pfam.counts.all.out
 
 time htseq-count \
 -f bam \
@@ -437,7 +438,7 @@ time htseq-count \
 -m union \
 --nonunique none \
 ${sample}.sorted.name.bam \
-thawponds_assembly.cds.hmmer_pfam.gff.out > ${sample}.pfam.counts.unique.out
+${gffFile} > ${sample}.pfam.counts.unique.out
 
 cp *counts*out ${wdir}/counts
 
