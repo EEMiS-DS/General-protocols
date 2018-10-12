@@ -394,6 +394,8 @@ cat hmmer/split500000/thawponds_assembly.cds.split500000.0000*domtblout > hmmer/
 
 ### Run htseq-count (nonunique) + htseq-count (all)
 
+We get two different types of counts, according to the [htseq-count manual](https://htseq.readthedocs.io/en/release_0.10.0/count.html "htseq-count manual"). We will use counts with `--non-unique all` for descriptive statistics and `--non-unique none` for differential abundance analysis.
+
 ```bash
 export wdir=`pwd`
 export gffFile="thawponds_assembly.cds.hmmer_pfam.gff"
